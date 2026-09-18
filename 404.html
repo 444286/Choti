@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>গল্প | Bangla Choti Kahinii</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Hind Siliguri',sans-serif;background:#f5faf7;color:#222;min-height:100vh}.top{background:#fff;border-bottom:2px solid #d4e8dc;padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}.back{border:0;background:#e8f5ee;color:#1a5c38;border-radius:22px;padding:8px 14px;font-family:inherit;font-weight:600;font-size:14px}.brand{font-weight:700;color:#1a5c38;font-size:18px}.wrap{max-width:800px;margin:auto;padding:18px 14px 40px}.box{background:#fff;border:1px solid #d4e8dc;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(33,122,71,.1)}.head{padding:22px 20px 12px}.title{font-size:28px;line-height:1.35;color:#1a5c38}.meta{display:flex;gap:12px;flex-wrap:wrap;color:#888;font-size:13px;margin-top:10px}.cover{width:100%;max-height:420px;object-fit:cover;display:block}.content{padding:22px 20px;font-size:17px;line-height:2;overflow-wrap:anywhere}.content img{max-width:100%;height:auto;border-radius:10px;display:block;margin:12px auto}.loading,.error{text-align:center;padding:60px 20px;color:#777}.error{color:#c62828}.home{display:inline-block;margin-top:18px;background:#217a47;color:#fff;text-decoration:none;padding:10px 18px;border-radius:24px;font-weight:600}.foot{text-align:center;color:#777;padding:20px;font-size:13px}@media(max-width:600px){.brand{font-size:16px}.wrap{padding:12px 10px 30px}.title{font-size:22px}.head{padding:18px 15px 12px}.content{font-size:16px;line-height:1.95;padding:18px 15px}}
+</style>
+</head>
+<body>
+<header class="top"><button class="back" onclick="location.href='/'">← হোম</button><div class="brand">Bangla Choti Kahinii 🌿</div></header>
+<main class="wrap"><div id="app" class="box loading">গল্প লোড হচ্ছে...</div></main>
+<footer class="foot">🌿 গল্প পড়ুন, কল্পনার জগতে হারিয়ে যান...</footer>
+<script>
+const API='https://choti.onrender.com';
+const app=document.getElementById('app');
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+function showError(){app.className='box error';app.innerHTML='<div style="font-size:42px">⚠️</div><div style="font-size:17px;font-weight:600">গল্পটি পাওয়া যায়নি।</div><a class="home" href="/">← হোমে ফিরে যান</a>';}
+async function load(){
+  try{
+    const parts=location.pathname.split('/').filter(Boolean);
+    const slug=parts.length?decodeURIComponent(parts[parts.length-1]):'';
+    const params=new URLSearchParams(location.search);
+    const querySlug=params.get('slug');
+    const id=params.get('id');
+    let url='';
+    if(querySlug) url=API+'/api/stories/slug/'+encodeURIComponent(querySlug);
+    else if(id) url=API+'/api/stories/'+encodeURIComponent(id);
+    else if(slug && slug!=='404.html' && slug!=='index.html') url=API+'/api/stories/slug/'+encodeURIComponent(slug);
+    else throw new Error('missing slug');
+    const r=await fetch(url,{headers:{Accept:'application/json'}});
+    if(!r.ok) throw new Error('not found');
+    const s=await r.json();
+    document.title=(s.title||'গল্প')+' | Bangla Choti Kahinii';
+    const date=s.createdAt?new Date(s.createdAt).toLocaleDateString('bn-BD'):'';
+    app.className='box';
+    app.innerHTML='<div class="head"><h1 class="title">'+esc(s.title||'গল্প')+'</h1><div class="meta"><span>👤 '+esc(s.author||'অজ্ঞাত')+'</span>'+(date?'<span>📅 '+date+'</span>':'')+'<span>👁 '+(Number(s.views)||0).toLocaleString('bn-BD')+'</span></div></div>'+(s.image?'<img class="cover" src="'+esc(s.image)+'" alt="'+esc(s.title||'গল্প')+'">':'')+'<article class="content">'+(s.content||'')+'</article>';
+  }catch(e){console.error(e);showError();}
+}
+load();
+</script>
+</body>
+</html>
