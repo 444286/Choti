@@ -685,7 +685,7 @@
       ).join('');
 
       return `
-        <div class="story-card" onclick="openStory('${s.slug || s._id}')">
+        <div class="story-card" onclick='openStory(${JSON.stringify(s.slug || '')}, ${JSON.stringify(s._id || '')})'>
           <div class="story-thumb">
             ${imgHtml}
             ${badge}
@@ -731,9 +731,18 @@
   }
 
   // ===== OPEN STORY PAGE =====
-  function openStory(slugOrId) {
-    if (!slugOrId) return;
-    window.location.href = `/${encodeURIComponent(slugOrId)}/`;
+  function openStory(slug, id) {
+    // Slug থাকলে clean URL ব্যবহার হবে
+    if (slug) {
+      window.location.href = `/${encodeURIComponent(slug)}/`;
+      return;
+    }
+
+    // পুরোনো story-তে slug না থাকলে ID দিয়ে story.html খুলবে
+    // এতে /story-এর মতো ভুল URL হবে না
+    if (id) {
+      window.location.href = `/story.html?id=${encodeURIComponent(id)}`;
+    }
   }
 
   function closeModal() {
