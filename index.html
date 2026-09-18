@@ -685,7 +685,7 @@
       ).join('');
 
       return `
-        <div class="story-card" onclick="openStory('${s._id}')">
+        <div class="story-card" onclick="window.location.href='story.html?id=${s._id}'">
           <div class="story-thumb">
             ${imgHtml}
             ${badge}
