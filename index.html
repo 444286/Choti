@@ -732,14 +732,10 @@
 
   // ===== OPEN STORY PAGE =====
   function openStory(slug, id) {
-    // Slug থাকলে clean URL ব্যবহার হবে
-    if (slug) {
+    if (slug && slug !== 'story' && slug !== 'story.html') {
       window.location.href = `/${encodeURIComponent(slug)}/`;
       return;
     }
-
-    // পুরোনো story-তে slug না থাকলে ID দিয়ে story.html খুলবে
-    // এতে /story-এর মতো ভুল URL হবে না
     if (id) {
       window.location.href = `/story.html?id=${encodeURIComponent(id)}`;
     }
