@@ -1,41 +1,44 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#111111">
-  <title>গল্প | বাংলা চটি কাহিনী</title>
-  <meta name="description" content="বাংলা গল্প পড়ুন।">
-  <style>
-    *{box-sizing:border-box}body{margin:0;background:#0b0b0b;color:#eee;font-family:Arial,'Noto Sans Bengali',sans-serif;line-height:1.8}.wrap{max-width:820px;margin:auto;padding:14px}.top{position:sticky;top:0;z-index:5;background:#111;border-bottom:1px solid #292929;padding:10px 14px;display:flex;align-items:center;gap:10px}.back{border:0;background:#222;color:#fff;border-radius:9px;padding:8px 13px;cursor:pointer}.brand{font-weight:700;font-size:16px}.card{margin-top:16px;background:#121212;border:1px solid #292929;border-radius:16px;overflow:hidden}.hero{width:100%;max-height:430px;object-fit:cover;display:block}.body{padding:20px}.title{font-size:28px;line-height:1.35;margin:0 0 10px;font-weight:800}.meta{display:flex;flex-wrap:wrap;gap:10px;color:#aaa;font-size:13px;border-bottom:1px solid #292929;padding-bottom:14px;margin-bottom:18px}.content{font-size:17px;color:#eee;overflow-wrap:anywhere}.content p{margin:0 0 18px}.content img{max-width:100%;height:auto;border-radius:10px}.loading{text-align:center;padding:60px 15px;color:#aaa}.error{text-align:center;padding:50px 15px;color:#ff7777}.share{margin-top:20px;padding-top:16px;border-top:1px solid #292929;display:flex;gap:8px}.share button{border:0;border-radius:9px;padding:9px 14px;background:#222;color:#fff;cursor:pointer}@media(max-width:600px){.title{font-size:23px}.content{font-size:16px}.body{padding:15px}}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>গল্প | Bangla Choti Kahinii</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Hind Siliguri',sans-serif;background:#f5faf7;color:#1a1a2e;min-height:100vh}.top{position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid #d4e8dc;padding:12px 16px;display:flex;align-items:center;gap:12px}.back{border:0;background:#e8f5ee;color:#1a5c38;border-radius:22px;padding:8px 14px;font-family:inherit;font-weight:600;cursor:pointer}.brand{font-weight:700;color:#1a5c38;font-size:18px}.wrap{max-width:800px;margin:0 auto;padding:18px 14px 40px}.article{background:#fff;border:1px solid #d4e8dc;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(33,122,71,.1)}.head{padding:22px 20px 12px}.title{font-size:28px;line-height:1.35;color:#1a5c38;font-weight:700}.meta{display:flex;gap:12px;flex-wrap:wrap;color:#888;font-size:13px;margin-top:10px}.cover{width:100%;max-height:420px;object-fit:cover;display:block}.content{padding:22px 20px;font-size:17px;line-height:2;color:#222;overflow-wrap:anywhere}.content p{margin-bottom:14px}.content img{max-width:100%;height:auto;border-radius:10px}.loading{text-align:center;padding:60px 20px;color:#777}.error{text-align:center;padding:60px 20px;color:#c62828}.home{display:inline-block;margin-top:18px;background:#217a47;color:#fff;text-decoration:none;padding:10px 18px;border-radius:24px}.foot{text-align:center;color:#777;padding:20px;font-size:13px}@media(max-width:600px){.title{font-size:22px}.content{font-size:16px;padding:18px 15px}.head{padding:18px 15px}}
+</style>
 </head>
 <body>
-  <div class="top"><button class="back" onclick="goBack()">← ফিরে যান</button><div class="brand">বাংলা চটি কাহিনী</div></div>
-  <main class="wrap"><div id="app" class="card"><div class="loading">গল্প লোড হচ্ছে...</div></div></main>
+<header class="top"><button class="back" onclick="goHome()">← হোম</button><div class="brand">Bangla Choti Kahinii 🌿</div></header>
+<main class="wrap"><div id="app" class="loading">গল্প লোড হচ্ছে...</div></main>
+<footer class="foot">🌿 গল্প পড়ুন, কল্পনার জগতে হারিয়ে যান...</footer>
 <script>
 const API='https://choti.onrender.com';
-function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
-function getSlug(){const parts=window.location.pathname.split('/').filter(Boolean);return parts.length?decodeURIComponent(parts[parts.length-1]):'';}
-function goBack(){if(history.length>1) history.back(); else window.location.href='/';}
+function goHome(){window.location.href='/';}
+function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
 async function loadStory(){
-  const app=document.getElementById('app');
-  const slug=getSlug();
-  const oldId=new URLSearchParams(location.search).get('id');
-  try{
-    let url;
-    if(slug && slug!=='story.html') url=`${API}/api/stories/slug/${encodeURIComponent(slug)}`;
-    else if(oldId) url=`${API}/api/stories/${encodeURIComponent(oldId)}`;
-    else throw new Error('Story URL missing');
-    const res=await fetch(url);
-    const story=await res.json();
-    if(!res.ok) throw new Error(story.error||'গল্প পাওয়া যায়নি');
-    document.title=`${story.title} | বাংলা চটি কাহিনী`;
-    const date=new Date(story.createdAt).toLocaleDateString('bn-BD',{day:'2-digit',month:'long',year:'numeric'});
-    app.innerHTML=`<article>${story.image?`<img class="hero" src="${escapeHTML(story.image)}" alt="${escapeHTML(story.title)}">`:''}<div class="body"><h1 class="title">${escapeHTML(story.title)}</h1><div class="meta"><span>👤 ${escapeHTML(story.author||'অজ্ঞাত')}</span><span>📅 ${date}</span><span>👁 ${(story.views||0).toLocaleString('bn-BD')}</span></div><div class="content">${story.content||''}</div><div class="share"><button onclick="shareStory()">🔗 শেয়ার করুন</button></div></div></article>`;
-  }catch(e){app.innerHTML=`<div class="error">❌ ${escapeHTML(e.message||'গল্প লোড করতে সমস্যা হয়েছে।')}<br><br><button class="back" onclick="window.location.href='/'">হোমে ফিরুন</button></div>`;}
+ const app=document.getElementById('app');
+ const parts=window.location.pathname.split('/').filter(Boolean);
+ const slug=parts.length?decodeURIComponent(parts[parts.length-1]):'';
+ const params=new URLSearchParams(location.search);
+ const oldId=params.get('id');
+ const querySlug=params.get('slug');
+ try{
+   let url;
+   if(querySlug) url=`${API}/api/stories/slug/${encodeURIComponent(querySlug)}`;
+   else if(slug && slug!=='story.html') url=`${API}/api/stories/slug/${encodeURIComponent(slug)}`;
+   else if(oldId) url=`${API}/api/stories/${encodeURIComponent(oldId)}`;
+   else throw new Error('Story link missing');
+   const res=await fetch(url);
+   if(!res.ok) throw new Error('Story not found');
+   const story=await res.json();
+   document.title=`${story.title} | Bangla Choti Kahinii`;
+   app.className='article';
+   app.innerHTML=`<div class="head"><h1 class="title">${escapeHTML(story.title)}</h1><div class="meta"><span>👤 ${escapeHTML(story.author||'অজ্ঞাত')}</span><span>📅 ${new Date(story.createdAt).toLocaleDateString('bn-BD')}</span><span>👁 ${(story.views||0).toLocaleString('bn-BD')}</span></div></div>${story.image?`<img class="cover" src="${escapeHTML(story.image)}" alt="${escapeHTML(story.title)}">`:''}<article class="content">${story.content||''}</article>`;
+ }catch(e){app.className='error';app.innerHTML=`<div>⚠️ গল্পটি পাওয়া যায়নি।</div><a class="home" href="/">← হোমে ফিরে যান</a>`;}
 }
-async function shareStory(){try{await navigator.share({title:document.title,url:location.href});}catch(e){try{await navigator.clipboard.writeText(location.href);alert('লিংক কপি হয়েছে!');}catch(x){alert(location.href);}}}
 loadStory();
 </script>
 </body>
