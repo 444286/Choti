@@ -685,7 +685,7 @@
       ).join('');
 
       return `
-        <div class="story-card" onclick='openStory(${JSON.stringify(s.slug || '')}, ${JSON.stringify(s._id || '')})'>
+        <div class="story-card" data-story-id="${s._id || ''}" data-story-slug="${s.slug || ''}" onclick="openStory(this.dataset.storySlug, this.dataset.storyId)">
           <div class="story-thumb">
             ${imgHtml}
             ${badge}
@@ -731,12 +731,40 @@
   }
 
   // ===== OPEN STORY PAGE =====
-  function openStory(slug, id) {
+  function makeSlug(title) {
+    return String(title || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\p{L}\p{N}\s_-]/gu, '')
+      .replace(/[\s-]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  async function openStory(slug, id) {
+    // Never send users to /story. If the API already gives a slug, use it.
     if (slug && slug !== 'story' && slug !== 'story.html') {
       window.location.href = `/${encodeURIComponent(slug)}/`;
       return;
     }
+
+    // Old posts may not have a slug. Fetch the post once by ID, then use its
+    // server-generated slug. If unavailable, open by ID as a safe fallback.
     if (id) {
+      try {
+        const res = await fetch(`${API}/api/stories/${encodeURIComponent(id)}`);
+        if (res.ok) {
+          const story = await res.json();
+          const serverSlug = story.slug;
+          if (serverSlug && serverSlug !== 'story' && serverSlug !== 'story.html') {
+            window.location.href = `/${encodeURIComponent(serverSlug)}/`;
+            return;
+          }
+        }
+      } catch (e) {}
+
       window.location.href = `/story.html?id=${encodeURIComponent(id)}`;
     }
   }
