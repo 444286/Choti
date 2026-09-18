@@ -685,7 +685,7 @@
       ).join('');
 
       return `
-        <div class="story-card" onclick="window.location.href='/' + encodeURIComponent(s.slug || s._id) + '/'">
+        <div class="story-card" onclick="openStory('${s.slug || s._id}')">
           <div class="story-thumb">
             ${imgHtml}
             ${badge}
@@ -730,35 +730,10 @@
     `;
   }
 
-  // ===== OPEN STORY MODAL =====
-  async function openStory(id) {
-    try {
-      const res = await fetch(`${API}/api/stories/${id}`);
-      const story = await res.json();
-
-      document.getElementById('modalTitle').textContent = story.title;
-      document.getElementById('modalContent').innerHTML = story.content;
-
-      const img = document.getElementById('modalImg');
-      if (story.image) {
-        img.src = story.image;
-        img.style.display = 'block';
-      } else {
-        img.style.display = 'none';
-      }
-
-      const date = new Date(story.createdAt).toLocaleDateString('bn-BD');
-      document.getElementById('modalMeta').innerHTML = `
-        <span>👤 ${story.author}</span>
-        <span>📅 ${date}</span>
-        <span>👁 ${(story.views || 0).toLocaleString('bn-BD')}</span>
-      `;
-
-      document.getElementById('storyModal').classList.add('open');
-      document.body.style.overflow = 'hidden';
-    } catch (err) {
-      alert('গল্প লোড করতে সমস্যা হয়েছে।');
-    }
+  // ===== OPEN STORY PAGE =====
+  function openStory(slugOrId) {
+    if (!slugOrId) return;
+    window.location.href = `/${encodeURIComponent(slugOrId)}/`;
   }
 
   function closeModal() {
