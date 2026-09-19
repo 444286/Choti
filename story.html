@@ -45,8 +45,7 @@ async function loadStory(){
     const date=story.createdAt?new Date(story.createdAt).toLocaleDateString('bn-BD'):'';
     const cats=await getCategories();
     const cmap=categoryMap(cats);
-    const categoryValues=(Array.isArray(story.categories)&&story.categories.length)?story.categories:(Array.isArray(story.tags)?story.tags:[]);
-    const catHtml=categoryValues.map(slug=>{
+    const catHtml=(story.categories||[]).map(slug=>{
       const c=cmap[slug]||{name:slug};
       const safeSlug=String(slug).replace(/'/g,"\\'");
       return `<button class="cat" onclick="openCategory('${safeSlug}')">${escapeHTML(c.name||slug)}</button>`;
@@ -66,10 +65,10 @@ async function loadStory(){
       linksHtml += `<section class="series-box"><div class="series-title">এই গল্পের অন্যান্য পর্ব</div><ol class="series-list">${optionItems}</ol></section>`;
     }
     if (relatedList.length && partsList.length < 4) {
-      linksHtml += `<section class="series-box"><div class="series-title related-title">এই বিভাগের আরও গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
+      linksHtml += `<section class="series-box"><div class="series-title related-title">আরও অন্যান্য গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
     }
     if (!partsList.length && relatedList.length) {
-      linksHtml = `<section class="series-box"><div class="series-title">এই বিভাগের আরও গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
+      linksHtml = `<section class="series-box"><div class="series-title">আরও অন্যান্য গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
     }
 
     const categoryHtml = catHtml
