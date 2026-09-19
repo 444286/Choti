@@ -66,14 +66,14 @@ async function loadStory(){
       linksHtml += `<section class="series-box"><div class="series-title">এই গল্পের অন্যান্য পর্ব</div><ol class="series-list">${optionItems}</ol></section>`;
     }
     if (relatedList.length && partsList.length < 4) {
-      linksHtml += `<section class="series-box"><div class="series-title related-title">এই বিভাগের আরও গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
+      linksHtml += `<section class="series-box"><div class="series-title related-title">আরও অন্যান্য গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
     }
     if (!partsList.length && relatedList.length) {
-      linksHtml = `<section class="series-box"><div class="series-title">এই বিভাগের আরও গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
+      linksHtml = `<section class="series-box"><div class="series-title">আরও অন্যান্য গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
     }
 
     const categoryHtml = catHtml
-      ? `<section class="category-end"><div class="category-title">এই গল্পের বিভাগ</div><div class="category-list">${catHtml}</div></section>`
+      ? `<section class="category-end"><div class="category-title">ক্যাটাগরি</div><div class="category-list">${catHtml}</div></section>`
       : '';
 
     app.className='article';
