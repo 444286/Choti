@@ -45,7 +45,8 @@ async function loadStory(){
     const date=story.createdAt?new Date(story.createdAt).toLocaleDateString('bn-BD'):'';
     const cats=await getCategories();
     const cmap=categoryMap(cats);
-    const catHtml=(story.categories||[]).map(slug=>{
+    const categoryValues=(Array.isArray(story.categories)&&story.categories.length)?story.categories:(Array.isArray(story.tags)?story.tags:[]);
+    const catHtml=categoryValues.map(slug=>{
       const c=cmap[slug]||{name:slug};
       const safeSlug=String(slug).replace(/'/g,"\\'");
       return `<button class="cat" onclick="openCategory('${safeSlug}')">${escapeHTML(c.name||slug)}</button>`;
