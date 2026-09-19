@@ -873,20 +873,35 @@
     overlay.classList.add('open');
     menu.innerHTML = '<div class="category-menu-title">বিভাগ</div><div class="cat-loading">বিভাগ লোড হচ্ছে...</div>';
 
-    try {
-      const res = await fetch(`${API}/api/categories`);
-      const list = res.ok ? await res.json() : [];
-      const items = (list || []).map(c => `
-        <button class="${currentCat === c.slug ? 'active' : ''}" onclick="selectCategory('${String(c.slug).replace(/'/g,"\\'")}')">${escapeHTML(categoryDisplayName(c))}</button>
-      `).join('');
-      menu.innerHTML = `
-        <div class="category-menu-title">বিভাগ</div>
-        <button class="${!currentCat ? 'active' : ''}" onclick="selectCategory('')">সব গল্প</button>
-        ${items || '<div class="cat-loading">কোনো বিভাগ নেই</div>'}
-      `;
-    } catch (err) {
-      menu.innerHTML = '<div class="category-menu-title">বিভাগ</div><div class="cat-loading">বিভাগ লোড করা যায়নি</div>';
-    }
+    const fixedCategories = [
+      ['ojachar','অজাচার বাংলা চটি গল্প'],
+      ['kajer-mashi','কাজের মাসি চোদার গল্প'],
+      ['kajer-meye','কাজের মেয়ে চোদার গল্প'],
+      ['kumari-meye','কুমারী মেয়ে চোদার গল্প'],
+      ['grihobodhu','গৃহবধূ চোদন কাহিনী'],
+      ['gay','গে সেক্স চটি'],
+      ['gram-sex','গ্রাম সেক্সের বাংলা চটি গল্প'],
+      ['porkiya','পরকীয়া বাংলা চটি গল্প'],
+      ['mature','পরিপক্ক চোদাচুদি গল্প'],
+      ['protibeshi','প্রতিবেশী চোদার চটি গল্প'],
+      ['famous','ফেমাস বাংলা চটি গল্প'],
+      ['babaji','বাবাজী চোদার বাংলা চটি গল্প'],
+      ['somokami','সমকামী বাংলা চটি গল্প'],
+      ['best','সেরা বাংলা চটি'],
+      ['student','স্টুডেন্ট বাংলা চটি গল্প'],
+      ['swami-stri','স্বামী স্ত্রী বাংলা চটি গল্প'],
+      ['hijra','হিজরা শীলে বাংলা চটি গল্প']
+    ];
+
+    const items = fixedCategories.map(([slug,name]) => `
+      <button class="${currentCat === slug ? 'active' : ''}" onclick="selectCategory('${slug}')">${escapeHTML(name)}</button>
+    `).join('');
+
+    menu.innerHTML = `
+      <div class="category-menu-title">বিভাগ</div>
+      <button class="${!currentCat ? 'active' : ''}" onclick="selectCategory('')">সব গল্প</button>
+      ${items}
+    `;
   }
 
   function selectCategory(slug) {
