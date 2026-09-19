@@ -688,21 +688,21 @@
   }
 
   async function loadCategories() {
-    if (categoryList.length) return;
-    try {
-      const res = await fetch(`${API}/api/categories`);
-      if (!res.ok) return;
-      categoryList = await res.json();
-      categoryMap = {};
-      categoryList.forEach(c => { categoryMap[c.slug] = c; });
-      const top = document.getElementById('filterTags');
-      if (top && categoryList.length) {
-        top.innerHTML = categoryList.map(c =>
-          `<button class="filter-tag" onclick="filterCat('${String(c.slug).replace(/'/g, "\\'")}', this)">${escapeHtml(c.name)}</button>`
-        ).join('');
-      }
-    } catch (e) {}
-  }
+  if (categoryList.length) return;
+
+  try {
+    const res = await fetch(`${API}/api/categories`);
+    if (!res.ok) return;
+
+    categoryList = await res.json();
+
+    categoryMap = {};
+    categoryList.forEach(c => {
+      categoryMap[c.slug] = c;
+    });
+
+  } catch (e) {}
+}
 
   // ===== RENDER STORIES =====
   function renderStories(stories) {
