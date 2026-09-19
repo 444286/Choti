@@ -866,7 +866,7 @@
   // ===== SEARCH =====
   function doSearch() {
     const q = document.getElementById('searchInput').value.trim();
-    loadStories(1, currentCat, q);
+    loadStories(1, currentCat, q, true);
   }
   document.getElementById('searchInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') doSearch();
