@@ -7,40 +7,80 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Hind Siliguri',sans-serif;background:#f5faf7;color:#222;min-height:100vh}.top{background:#fff;border-bottom:2px solid #d4e8dc;padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}.back{border:0;background:#e8f5ee;color:#1a5c38;border-radius:22px;padding:8px 14px;font-family:inherit;font-weight:600;font-size:14px}.brand{font-weight:700;color:#1a5c38;font-size:18px}.wrap{max-width:800px;margin:auto;padding:18px 14px 40px}.box{background:#fff;border:1px solid #d4e8dc;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(33,122,71,.1)}.head{padding:22px 20px 12px}.title{font-size:28px;line-height:1.35;color:#1a5c38}.meta{display:flex;gap:12px;flex-wrap:wrap;color:#888;font-size:13px;margin-top:10px}.cover{width:100%;max-height:420px;object-fit:cover;display:block}.content{padding:22px 20px;font-size:17px;line-height:2;overflow-wrap:anywhere}.content img{max-width:100%;height:auto;border-radius:10px;display:block;margin:12px auto}.loading,.error{text-align:center;padding:60px 20px;color:#777}.error{color:#c62828}.home{display:inline-block;margin-top:18px;background:#217a47;color:#fff;text-decoration:none;padding:10px 18px;border-radius:24px;font-weight:600}.foot{text-align:center;color:#777;padding:20px;font-size:13px}@media(max-width:600px){.brand{font-size:16px}.wrap{padding:12px 10px 30px}.title{font-size:22px}.head{padding:18px 15px 12px}.content{font-size:16px;line-height:1.95;padding:18px 15px}}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Hind Siliguri',sans-serif;background:#f5faf7;color:#1a1a2e;min-height:100vh}.top{position:sticky;top:0;z-index:10;background:#fff;border-bottom:2px solid #d4e8dc;padding:12px 16px;display:flex;align-items:center;gap:12px}.back{border:0;background:#e8f5ee;color:#1a5c38;border-radius:22px;padding:8px 14px;font-family:inherit;font-weight:600;cursor:pointer;font-size:14px}.brand{font-weight:700;color:#1a5c38;font-size:18px}.wrap{max-width:800px;margin:0 auto;padding:18px 14px 40px}.article{background:#fff;border:1px solid #d4e8dc;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(33,122,71,.10)}.head{padding:22px 20px 12px}.title{font-size:28px;line-height:1.35;color:#1a5c38;font-weight:700}.meta{display:flex;gap:12px;flex-wrap:wrap;color:#888;font-size:13px;margin-top:10px}.cats{display:block;margin-top:12px;font-size:15px;line-height:1.9;color:#217a47}.cat{border:0;background:transparent;color:#217a47;padding:0;margin:0;font-family:inherit;font-size:15px;font-weight:500;cursor:pointer}.cat:hover{text-decoration:underline}.cat+.cat::before{content:', ';color:#888}.category-end{margin:0 20px 22px;padding-top:16px;border-top:1px solid #d4e8dc}.category-title{font-size:18px;color:#1a5c38;font-weight:700;margin-bottom:7px}.category-list{font-size:15px;line-height:1.9;color:#217a47}.series-box{margin:4px 20px 24px;padding:18px 0 0;border-top:1px solid #d4e8dc}.series-title{font-size:18px;color:#1a5c38;font-weight:700;margin-bottom:10px}.series-list{margin:0;padding-left:28px}.related-title{margin-top:18px}.series-list li{padding:5px 0;color:#444;font-size:16px;line-height:1.55}.series-list a{color:#217a47;text-decoration:none;font-weight:600}.series-list a:hover{text-decoration:underline}.cover{width:100%;max-height:420px;object-fit:cover;display:block}.content{padding:22px 20px;font-size:17px;line-height:2;color:#222;overflow-wrap:anywhere}.content p{margin-bottom:14px}.content img{max-width:100%;height:auto;border-radius:10px;display:block;margin:12px auto}.loading{background:#fff;border:1px solid #d4e8dc;border-radius:16px;text-align:center;padding:60px 20px;color:#777}.error{background:#fff;border:1px solid #ead1d1;border-radius:16px;text-align:center;padding:60px 20px;color:#c62828;box-shadow:0 2px 12px rgba(0,0,0,.05)}.error-icon{font-size:42px;margin-bottom:10px}.error-text{font-size:17px;font-weight:600}.home{display:inline-block;margin-top:18px;background:#217a47;color:#fff;text-decoration:none;padding:10px 18px;border-radius:24px;font-weight:600}.foot{text-align:center;color:#777;padding:20px;font-size:13px}@media(max-width:600px){.top{padding:10px 12px}.brand{font-size:16px}.wrap{padding:12px 10px 30px}.article{border-radius:13px}.title{font-size:22px}.head{padding:18px 15px 12px}.content{font-size:16px;line-height:1.95;padding:18px 15px}.meta{font-size:12px;gap:8px}.cover{max-height:300px}}
 </style>
 </head>
 <body>
-<header class="top"><button class="back" onclick="location.href='/'">← হোম</button><div class="brand">Bangla Choti Kahinii 🌿</div></header>
-<main class="wrap"><div id="app" class="box loading">গল্প লোড হচ্ছে...</div></main>
+<header class="top"><button class="back" onclick="goHome()">← হোম</button><div class="brand">Bangla Choti Kahinii 🌿</div></header>
+<main class="wrap"><div id="app" class="loading">গল্প লোড হচ্ছে...</div></main>
 <footer class="foot">🌿 গল্প পড়ুন, কল্পনার জগতে হারিয়ে যান...</footer>
 <script>
 const API='https://choti.onrender.com';
-const app=document.getElementById('app');
-function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
-function showError(){app.className='box error';app.innerHTML='<div style="font-size:42px">⚠️</div><div style="font-size:17px;font-weight:600">গল্পটি পাওয়া যায়নি।</div><a class="home" href="/">← হোমে ফিরে যান</a>';}
-async function load(){
+function goHome(){window.location.href='/';}
+function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+async function getCategories(){try{const r=await fetch(`${API}/api/categories`);return r.ok?await r.json():[]}catch(e){return[];}}
+async function getStoryLinks(id){try{const r=await fetch(`${API}/api/stories/related/${encodeURIComponent(id)}`);return r.ok?await r.json():{series:{parts:[]},related:[]};}catch(e){return{series:{parts:[]},related:[]};}}
+function categoryMap(list){const m={};(list||[]).forEach(c=>m[c.slug]=c);return m;}
+function openCategory(slug){if(!slug)return;window.location.href=`/?category=${encodeURIComponent(slug)}`;}
+function storyLink(item){if(item.slug)return `/${encodeURIComponent(item.slug)}/`;return `/story.html?id=${encodeURIComponent(item._id)}`;}
+function showError(){const app=document.getElementById('app');app.className='error';app.innerHTML='<div class="error-icon">⚠️</div><div class="error-text">গল্পটি পাওয়া যায়নি।</div><a class="home" href="/">← হোমে ফিরে যান</a>';}
+async function loadStory(){
+  const app=document.getElementById('app');
+  const parts=window.location.pathname.split('/').filter(Boolean);
+  const pathPart=parts.length?decodeURIComponent(parts[parts.length-1]):'';
+  const params=new URLSearchParams(window.location.search);
+  const querySlug=params.get('slug');
+  const oldId=params.get('id');
+  const isPlaceholder=!pathPart||pathPart==='story'||pathPart==='story.html'||pathPart==='index.html';
   try{
-    const parts=location.pathname.split('/').filter(Boolean);
-    const slug=parts.length?decodeURIComponent(parts[parts.length-1]):'';
-    const params=new URLSearchParams(location.search);
-    const querySlug=params.get('slug');
-    const id=params.get('id');
-    let url='';
-    if(querySlug) url=API+'/api/stories/slug/'+encodeURIComponent(querySlug);
-    else if(id) url=API+'/api/stories/'+encodeURIComponent(id);
-    else if(slug && slug!=='404.html' && slug!=='index.html') url=API+'/api/stories/slug/'+encodeURIComponent(slug);
-    else throw new Error('missing slug');
-    const r=await fetch(url,{headers:{Accept:'application/json'}});
-    if(!r.ok) throw new Error('not found');
-    const s=await r.json();
-    document.title=(s.title||'গল্প')+' | Bangla Choti Kahinii';
-    const date=s.createdAt?new Date(s.createdAt).toLocaleDateString('bn-BD'):'';
-    app.className='box';
-    app.innerHTML='<div class="head"><h1 class="title">'+esc(s.title||'গল্প')+'</h1><div class="meta"><span>👤 '+esc(s.author||'অজ্ঞাত')+'</span>'+(date?'<span>📅 '+date+'</span>':'')+'<span>👁 '+(Number(s.views)||0).toLocaleString('bn-BD')+'</span></div></div>'+(s.image?'<img class="cover" src="'+esc(s.image)+'" alt="'+esc(s.title||'গল্প')+'">':'')+'<article class="content">'+(s.content||'')+'</article>';
+    let url;
+    if(querySlug){url=`${API}/api/stories/slug/${encodeURIComponent(querySlug)}`;}
+    else if(!isPlaceholder){url=`${API}/api/stories/slug/${encodeURIComponent(pathPart)}`;}
+    else if(oldId){url=`${API}/api/stories/${encodeURIComponent(oldId)}`;}
+    else{throw new Error('Missing story identifier');}
+    const res=await fetch(url,{headers:{'Accept':'application/json'}});
+    if(!res.ok)throw new Error('Story not found');
+    const story=await res.json();
+    document.title=`${story.title||'গল্প'} | Bangla Choti Kahinii`;
+    const date=story.createdAt?new Date(story.createdAt).toLocaleDateString('bn-BD'):'';
+    const cats=await getCategories();
+    const cmap=categoryMap(cats);
+    const categoryValues=(Array.isArray(story.categories)&&story.categories.length)?story.categories:(Array.isArray(story.tags)?story.tags:[]);
+    const catHtml=categoryValues.map(slug=>{
+      const c=cmap[slug]||{name:slug};
+      const safeSlug=String(slug).replace(/'/g,"\\'");
+      return `<button class="cat" onclick="openCategory('${safeSlug}')">${escapeHTML(c.name||slug)}</button>`;
+    }).join('');
+
+    const links=await getStoryLinks(story._id);
+    const partsList=(links.series&&Array.isArray(links.series.parts))?links.series.parts:[];
+    const relatedList=Array.isArray(links.related)?links.related:[];
+    const optionItems=partsList.map((item,i)=>
+      `<li><a href="${storyLink(item)}">${escapeHTML(item.title||`পর্ব ${item.part||i+1}`)}</a></li>`
+    ).join('');
+    const relatedItems=relatedList.map(item=>
+      `<li><a href="${storyLink(item)}">${escapeHTML(item.title||'গল্প')}</a></li>`
+    ).join('');
+    let linksHtml = '';
+    if (partsList.length) {
+      linksHtml += `<section class="series-box"><div class="series-title">এই গল্পের অন্যান্য পর্ব</div><ol class="series-list">${optionItems}</ol></section>`;
+    }
+    if (relatedList.length && partsList.length < 4) {
+      linksHtml += `<section class="series-box"><div class="series-title related-title">এই বিভাগের আরও গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
+    }
+    if (!partsList.length && relatedList.length) {
+      linksHtml = `<section class="series-box"><div class="series-title">এই বিভাগের আরও গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
+    }
+
+    const categoryHtml = catHtml
+      ? `<section class="category-end"><div class="category-title">এই গল্পের বিভাগ</div><div class="category-list">${catHtml}</div></section>`
+      : '';
+
+    app.className='article';
+    app.innerHTML=`<div class="head"><h1 class="title">${escapeHTML(story.title||'গল্প')}</h1><div class="meta"><span>👤 ${escapeHTML(story.author||'অজ্ঞাত')}</span>${date?`<span>📅 ${date}</span>`:''}<span>👁 ${(Number(story.views)||0).toLocaleString('bn-BD')}</span></div></div>${story.image?`<img class="cover" src="${escapeHTML(story.image)}" alt="${escapeHTML(story.title||'গল্প')}" loading="lazy">`:''}<article class="content">${story.content||''}</article>${categoryHtml}${linksHtml}`;
   }catch(e){console.error(e);showError();}
 }
-load();
+loadStory();
 </script>
 </body>
 </html>
