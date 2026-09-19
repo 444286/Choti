@@ -334,19 +334,25 @@
       overflow: hidden;
     }
     .story-cats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+      display: block;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--green-main);
     }
     .story-cat {
-      background: var(--green-bg);
-      color: var(--green-dark);
-      border: 1px solid #b8ddc8;
-      border-radius: 14px;
-      padding: 3px 10px;
-      font-size: 11px;
+      display: inline;
+      border: 0;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      color: var(--green-main);
+      cursor: pointer;
+      font-family: 'Hind Siliguri', sans-serif;
+      font-size: 12px;
       font-weight: 500;
     }
+    .story-cat:hover { text-decoration: underline; }
+    .story-cat + .story-cat::before { content: ', '; color: var(--text-light); }
     .story-arrow {
       width: 34px;
       height: 34px;
@@ -637,6 +643,8 @@
   let currentCat = '';
   let currentSearch = '';
   let totalPages = 1;
+  let categoryMap = {};
+  let categoryList = [];
 
   // ===== LOAD STORIES =====
   async function loadStories(page = 1, cat = '', search = '') {
@@ -648,6 +656,7 @@
     section.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><div>গল্প লোড হচ্ছে...</div></div>';
 
     try {
+      await loadCategories();
       let url = `${API}/api/stories?page=${page}&limit=10`;
       if (cat) url += `&category=${cat}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
@@ -661,6 +670,27 @@
     } catch (err) {
       section.innerHTML = '<div class="loading-spinner">⚠️ গল্প লোড করতে সমস্যা হয়েছে।</div>';
     }
+  }
+
+  function escapeHtml(v) {
+    return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  }
+
+  async function loadCategories() {
+    if (categoryList.length) return;
+    try {
+      const res = await fetch(`${API}/api/categories`);
+      if (!res.ok) return;
+      categoryList = await res.json();
+      categoryMap = {};
+      categoryList.forEach(c => { categoryMap[c.slug] = c; });
+      const top = document.getElementById('filterTags');
+      if (top && categoryList.length) {
+        top.innerHTML = categoryList.map(c =>
+          `<button class="filter-tag" onclick="filterCat('${String(c.slug).replace(/'/g, "\\'")}', this)">${c.icon || '🏷️'} ${escapeHtml(c.name)}</button>`
+        ).join('');
+      }
+    } catch (e) {}
   }
 
   // ===== RENDER STORIES =====
@@ -680,9 +710,10 @@
       const imgHtml = s.image
         ? `<img src="${s.image}" alt="${s.title}" loading="lazy" />`
         : `<div class="no-img">📖</div>`;
-      const cats = (s.categories || []).map(c =>
-        `<span class="story-cat">${c}</span>`
-      ).join('');
+      const cats = (s.categories || []).map(c => {
+        const info = categoryMap[c] || { name: c, icon: '🏷️' };
+        return `<button type="button" class="story-cat" onclick="event.stopPropagation(); filterCat('${String(c).replace(/'/g, "\\'")}', this)">${info.icon ? info.icon + ' ' : ''}${escapeHtml(info.name || c)}</button>`;
+      }).join('');
 
       return `
         <div class="story-card" data-story-id="${s._id || ''}" data-story-slug="${s.slug || ''}" onclick="openStory(this.dataset.storySlug, this.dataset.storyId)">
@@ -782,11 +813,14 @@
   // ===== FILTER BY CATEGORY =====
   function filterCat(cat, btn) {
     currentCat = cat;
-    // Update active filter tag
     if (btn) {
       document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
     }
+    const url = new URL(window.location.href);
+    if (cat) url.searchParams.set('category', cat);
+    else url.searchParams.delete('category');
+    history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
     loadStories(1, cat, currentSearch);
   }
 
@@ -826,7 +860,8 @@
   }
 
   // ===== INIT =====
-  loadStories(1, '', '');
+  const initialCategory = new URLSearchParams(window.location.search).get('category') || '';
+  loadCategories().finally(() => loadStories(1, initialCategory, ''));
 </script>
 </body>
 </html>
