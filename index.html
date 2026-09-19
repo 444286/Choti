@@ -811,18 +811,46 @@
   });
 
   // ===== FILTER BY CATEGORY =====
-  function filterCat(cat, btn) {
-    currentCat = cat;
-    if (btn) {
-      document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
+  function setActiveCategoryButton(cat) {
+    document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+    if (!cat) {
+      const homeBtn = document.querySelector('.filter-tag');
+      if (homeBtn) homeBtn.classList.add('active');
+      return;
     }
-    const url = new URL(window.location.href);
-    if (cat) url.searchParams.set('category', cat);
-    else url.searchParams.delete('category');
-    history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
-    loadStories(1, cat, currentSearch);
+    const btn = Array.from(document.querySelectorAll('.filter-tag')).find(t => {
+      const m = t.getAttribute('onclick') || '';
+      return m.includes(`filterCat('${cat}'`);
+    });
+    if (btn) btn.classList.add('active');
   }
+
+  function filterCat(cat, btn, addHistory = true) {
+    currentCat = cat || '';
+    setActiveCategoryButton(currentCat);
+
+    const url = new URL(window.location.href);
+    if (currentCat) url.searchParams.set('category', currentCat);
+    else url.searchParams.delete('category');
+
+    const newUrl = url.pathname + (url.search ? url.search : '');
+    if (addHistory) {
+      const currentUrl = window.location.pathname + window.location.search;
+      if (currentUrl !== newUrl) {
+        history.pushState({ category: currentCat }, '', newUrl);
+      }
+    }
+    loadStories(1, currentCat, currentSearch);
+  }
+
+  // Android/Chrome Back button: restore the previous category/home state.
+  window.addEventListener('popstate', () => {
+    const params = new URLSearchParams(window.location.search);
+    const cat = params.get('category') || '';
+    currentCat = cat;
+    setActiveCategoryButton(cat);
+    loadStories(1, cat, currentSearch);
+  });
 
   // ===== SEARCH =====
   function doSearch() {
@@ -861,6 +889,8 @@
 
   // ===== INIT =====
   const initialCategory = new URLSearchParams(window.location.search).get('category') || '';
+  currentCat = initialCategory;
+  setActiveCategoryButton(initialCategory);
   loadCategories().finally(() => loadStories(1, initialCategory, ''));
 </script>
 </body>
