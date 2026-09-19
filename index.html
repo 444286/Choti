@@ -151,52 +151,6 @@
       50% { box-shadow: 0 0 0 7px rgba(230,57,70,0); }
     }
 
-    /* ===== CATEGORY OVERLAY ===== */
-    .category-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 3000;
-      background: rgba(0,0,0,0.18);
-    }
-    .category-overlay.open { display: block; }
-    .category-menu {
-      position: fixed;
-      width: min(360px, calc(100vw - 20px));
-      max-height: 72vh;
-      overflow-y: auto;
-      background: #303030;
-      border-radius: 0 0 4px 4px;
-      box-shadow: 0 12px 30px rgba(0,0,0,.30);
-    }
-    .category-menu-title {
-      padding: 13px 20px;
-      color: #fff;
-      font-size: 17px;
-      font-weight: 700;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-    .category-menu button {
-      width: 100%;
-      display: block;
-      border: 0;
-      background: transparent;
-      color: #fff;
-      text-align: left;
-      padding: 12px 20px;
-      font-family: 'Hind Siliguri', sans-serif;
-      font-size: 15px;
-      cursor: pointer;
-      line-height: 1.45;
-    }
-    .category-menu button:hover,
-    .category-menu button.active { background: #3d3d3d; color: #fff; }
-    .category-menu .cat-loading {
-      color: #ccc;
-      padding: 20px;
-      text-align: center;
-    }
-
     /* ===== HERO BANNER ===== */
     .hero {
       background: linear-gradient(135deg, #0d3d22 0%, #1a5c38 50%, #0d3d22 100%);
@@ -380,19 +334,25 @@
       overflow: hidden;
     }
     .story-cats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+      display: block;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--green-main);
     }
     .story-cat {
-      background: var(--green-bg);
-      color: var(--green-dark);
-      border: 1px solid #b8ddc8;
-      border-radius: 14px;
-      padding: 3px 10px;
-      font-size: 11px;
+      display: inline;
+      border: 0;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      color: var(--green-main);
+      cursor: pointer;
+      font-family: 'Hind Siliguri', sans-serif;
+      font-size: 12px;
       font-weight: 500;
     }
+    .story-cat:hover { text-decoration: underline; }
+    .story-cat + .story-cat::before { content: ', '; color: var(--text-light); }
     .story-arrow {
       width: 34px;
       height: 34px;
@@ -620,21 +580,13 @@
 <nav class="nav">
   <div class="nav-inner">
     <a href="#" class="nav-link active" onclick="filterCat(''); return false;">🏠 হোম</a>
-    <a href="#" class="nav-link" id="categoryNavBtn" onclick="showCategoryMenu(event); return false;">বিভাগ ▾</a>
+    <a href="#" class="nav-link" onclick="filterCat('popular'); return false;">বিভাগ ▾</a>
     <a href="#" class="nav-link" onclick="showSubmitModal(); return false;">গল্প লিখে পাঠান</a>
     <a href="#" class="nav-link" onclick="filterCat('hot'); return false;">সেরা গল্প</a>
     <a href="#" class="nav-link">যোগাযোগ</a>
     <button class="nav-live">🔥 LIVE CAMS</button>
   </div>
 </nav>
-
-<!-- ===== CATEGORY OVERLAY ===== -->
-<div class="category-overlay" id="categoryOverlay" onclick="closeCategoryMenu(event)">
-  <div class="category-menu" id="categoryMenu" onclick="event.stopPropagation()">
-    <div class="category-menu-title">বিভাগ</div>
-    <div class="cat-loading">বিভাগ লোড হচ্ছে...</div>
-  </div>
-</div>
 
 <!-- ===== HERO ===== -->
 <div class="hero">
@@ -691,23 +643,31 @@
   let currentCat = '';
   let currentSearch = '';
   let totalPages = 1;
-
-  function escapeHTML(v) {
-    return String(v ?? '').replace(/[&<>"']/g, m => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
-    }[m]));
-  }
+  let suppressHistory = false;
+  let categoryMap = {};
+  let categoryList = [];
 
   // ===== LOAD STORIES =====
-  async function loadStories(page = 1, cat = '', search = '') {
+  async function loadStories(page = 1, cat = '', search = '', addHistory = false) {
     currentPage = page;
     currentCat = cat;
     currentSearch = search;
+
+    if (addHistory && !suppressHistory) {
+      const url = new URL(window.location.href);
+      if (cat) url.searchParams.set('category', cat); else url.searchParams.delete('category');
+      if (page > 1) url.searchParams.set('page', String(page)); else url.searchParams.delete('page');
+      if (search) url.searchParams.set('search', search); else url.searchParams.delete('search');
+      const newUrl = url.pathname + (url.search ? url.search : '');
+      const currentUrl = window.location.pathname + window.location.search;
+      if (currentUrl !== newUrl) history.pushState({category: cat, page, search}, '', newUrl);
+    }
 
     const section = document.getElementById('storiesSection');
     section.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><div>গল্প লোড হচ্ছে...</div></div>';
 
     try {
+      await loadCategories();
       let url = `${API}/api/stories?page=${page}&limit=15`;
       if (cat) url += `&category=${cat}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
@@ -721,6 +681,27 @@
     } catch (err) {
       section.innerHTML = '<div class="loading-spinner">⚠️ গল্প লোড করতে সমস্যা হয়েছে।</div>';
     }
+  }
+
+  function escapeHtml(v) {
+    return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  }
+
+  async function loadCategories() {
+    if (categoryList.length) return;
+    try {
+      const res = await fetch(`${API}/api/categories`);
+      if (!res.ok) return;
+      categoryList = await res.json();
+      categoryMap = {};
+      categoryList.forEach(c => { categoryMap[c.slug] = c; });
+      const top = document.getElementById('filterTags');
+      if (top && categoryList.length) {
+        top.innerHTML = categoryList.map(c =>
+          `<button class="filter-tag" onclick="filterCat('${String(c.slug).replace(/'/g, "\\'")}', this)">${escapeHtml(c.name)}</button>`
+        ).join('');
+      }
+    } catch (e) {}
   }
 
   // ===== RENDER STORIES =====
@@ -740,12 +721,13 @@
       const imgHtml = s.image
         ? `<img src="${s.image}" alt="${s.title}" loading="lazy" />`
         : `<div class="no-img">📖</div>`;
-      const cats = (s.categories || []).map(c =>
-        `<span class="story-cat">${escapeHTML(categoryDisplayName(c))}</span>`
-      ).join('');
+      const cats = (s.categories || []).map(c => {
+        const info = categoryMap[c] || { name: c };
+        return `<button type="button" class="story-cat" onclick="event.stopPropagation(); filterCat('${String(c).replace(/'/g, "\\'")}', this)">${escapeHtml(info.name || c)}</button>`;
+      }).join('');
 
       return `
-        <div class="story-card" onclick='openStory(${JSON.stringify(s.slug || '')}, ${JSON.stringify(s._id || '')})'>
+        <div class="story-card" data-story-id="${s._id || ''}" data-story-slug="${s.slug || ''}" onclick="openStory(this.dataset.storySlug, this.dataset.storyId)">
           <div class="story-thumb">
             ${imgHtml}
             ${badge}
@@ -780,27 +762,51 @@
     }
 
     wrap.innerHTML = `
-      <button class="page-prev" onclick="loadStories(${Math.max(1, page-1)}, '${currentCat}', '${currentSearch}')" ${page === 1 ? 'disabled' : ''}>← Previous</button>
+      <button class="page-prev" onclick="changePage(${Math.max(1, page-1)})" ${page === 1 ? 'disabled' : ''}>← Previous</button>
       ${pages.map(p =>
         p === '...'
           ? `<span class="page-dots">...</span>`
-          : `<button class="page-btn ${p === page ? 'active' : ''}" onclick="loadStories(${p}, '${currentCat}', '${currentSearch}')">${p}</button>`
+          : `<button class="page-btn ${p === page ? 'active' : ''}" onclick="changePage(${p})">${p}</button>`
       ).join('')}
-      <button class="page-next" onclick="loadStories(${Math.min(totalPages, page+1)}, '${currentCat}', '${currentSearch}')" ${page === totalPages ? 'disabled' : ''}>Next →</button>
+      <button class="page-next" onclick="changePage(${Math.min(totalPages, page+1)})" ${page === totalPages ? 'disabled' : ''}>Next →</button>
     `;
   }
 
   // ===== OPEN STORY PAGE =====
-  function openStory(slug, id) {
-    // Slug থাকলে clean URL ব্যবহার হবে
-    if (slug) {
+  function makeSlug(title) {
+    return String(title || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\p{L}\p{N}\s_-]/gu, '')
+      .replace(/[\s-]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  async function openStory(slug, id) {
+    // Never send users to /story. If the API already gives a slug, use it.
+    if (slug && slug !== 'story' && slug !== 'story.html') {
       window.location.href = `/${encodeURIComponent(slug)}/`;
       return;
     }
 
-    // পুরোনো story-তে slug না থাকলে ID দিয়ে story.html খুলবে
-    // এতে /story-এর মতো ভুল URL হবে না
+    // Old posts may not have a slug. Fetch the post once by ID, then use its
+    // server-generated slug. If unavailable, open by ID as a safe fallback.
     if (id) {
+      try {
+        const res = await fetch(`${API}/api/stories/${encodeURIComponent(id)}`);
+        if (res.ok) {
+          const story = await res.json();
+          const serverSlug = story.slug;
+          if (serverSlug && serverSlug !== 'story' && serverSlug !== 'story.html') {
+            window.location.href = `/${encodeURIComponent(serverSlug)}/`;
+            return;
+          }
+        }
+      } catch (e) {}
+
       window.location.href = `/story.html?id=${encodeURIComponent(id)}`;
     }
   }
@@ -815,108 +821,52 @@
     if (e.target === this) closeModal();
   });
 
-  // ===== CATEGORY NAMES =====
-  const CATEGORY_NAME_MAP = {
-    'ojachar': 'অজাচার বাংলা চটি গল্প',
-    'kajer-mashi': 'কাজের মাসি চোদার গল্প',
-    'kajer-meye': 'কাজের মেয়ে চোদার গল্প',
-    'kumari-meye': 'কুমারী মেয়ে চোদার গল্প',
-    'grihobodhu': 'গৃহবধূ চোদন কাহিনী',
-    'gay': 'গে সেক্স চটি',
-    'gram-sex': 'গ্রাম সেক্সের বাংলা চটি গল্প',
-    'porkiya': 'পরকীয়া বাংলা চটি গল্প',
-    'mature': 'পরিপক্ক চোদাচুদি গল্প',
-    'protibeshi': 'প্রতিবেশী চোদার চটি গল্প',
-    'famous': 'ফেমাস বাংলা চটি গল্প',
-    'babaji': 'বাবাজী চোদার বাংলা চটি গল্প',
-    'somokami': 'সমকামী বাংলা চটি গল্প',
-    'best': 'সেরা বাংলা চটি',
-    'student': 'স্টুডেন্ট বাংলা চটি গল্প',
-    'swami-stri': 'স্বামী স্ত্রী বাংলা চটি গল্প',
-    'hijra': 'হিজরা শীলে বাংলা চটি গল্প'
-  };
-
-  function categoryDisplayName(cat) {
-    const slug = String(cat?.slug || cat || '').toLowerCase();
-    if (CATEGORY_NAME_MAP[slug]) return CATEGORY_NAME_MAP[slug];
-
-    const name = String(cat?.name || cat || '');
-    const n = name.toLowerCase();
-    if (n.includes('অজাচার')) return 'অজাচার বাংলা চটি গল্প';
-    if (n.includes('কাজের মাসি')) return 'কাজের মাসি চোদার গল্প';
-    if (n.includes('কাজের মেয়ে') || n.includes('কাজের মেয়ে')) return 'কাজের মেয়ে চোদার গল্প';
-    if (n.includes('কুমারী')) return 'কুমারী মেয়ে চোদার গল্প';
-    if (n.includes('গৃহবধূ') || n.includes('গৃহবধু')) return 'গৃহবধূ চোদন কাহিনী';
-    if (n.includes('গে')) return 'গে সেক্স চটি';
-    if (n.includes('গ্রাম')) return 'গ্রাম সেক্সের বাংলা চটি গল্প';
-    if (n.includes('পরকীয়া') || n.includes('পরকীয়া')) return 'পরকীয়া বাংলা চটি গল্প';
-    if (n.includes('পরিপক্ক')) return 'পরিপক্ক চোদাচুদি গল্প';
-    if (n.includes('প্রতিবেশী')) return 'প্রতিবেশী চোদার চটি গল্প';
-    if (n.includes('ফেমাস')) return 'ফেমাস বাংলা চটি গল্প';
-    if (n.includes('বাবাজী') || n.includes('বাবাজি')) return 'বাবাজী চোদার বাংলা চটি গল্প';
-    if (n.includes('সমকামী')) return 'সমকামী বাংলা চটি গল্প';
-    if (n.includes('সেরা')) return 'সেরা বাংলা চটি';
-    if (n.includes('স্টুডেন্ট')) return 'স্টুডেন্ট বাংলা চটি গল্প';
-    if (n.includes('স্বামী স্ত্রী') || n.includes('স্বামী-স্ত্রী')) return 'স্বামী স্ত্রী বাংলা চটি গল্প';
-    if (n.includes('হিজরা')) return 'হিজরা শীলে বাংলা চটি গল্প';
-    return name;
-  }
-
-  async function showCategoryMenu(e) {
-    if (e) e.preventDefault();
-    const overlay = document.getElementById('categoryOverlay');
-    const menu = document.getElementById('categoryMenu');
-    const nav = document.getElementById('categoryNavBtn');
-    const rect = nav.getBoundingClientRect();
-    menu.style.top = `${Math.min(rect.bottom, window.innerHeight - 120)}px`;
-    menu.style.left = `${Math.max(10, Math.min(rect.left, window.innerWidth - Math.min(360, window.innerWidth - 20) - 10))}px`;
-    overlay.classList.add('open');
-    menu.innerHTML = '<div class="category-menu-title">বিভাগ</div><div class="cat-loading">বিভাগ লোড হচ্ছে...</div>';
-
-    try {
-      const res = await fetch(`${API}/api/categories`);
-      const list = res.ok ? await res.json() : [];
-      const items = (list || []).map(c => `
-        <button class="${currentCat === c.slug ? 'active' : ''}" onclick="selectCategory('${String(c.slug).replace(/'/g,"\\'")}')">${escapeHTML(categoryDisplayName(c))}</button>
-      `).join('');
-      menu.innerHTML = `
-        <div class="category-menu-title">বিভাগ</div>
-        <button class="${!currentCat ? 'active' : ''}" onclick="selectCategory('')">সব গল্প</button>
-        ${items || '<div class="cat-loading">কোনো বিভাগ নেই</div>'}
-      `;
-    } catch (err) {
-      menu.innerHTML = '<div class="category-menu-title">বিভাগ</div><div class="cat-loading">বিভাগ লোড করা যায়নি</div>';
-    }
-  }
-
-  function selectCategory(slug) {
-    closeCategoryMenu();
-    filterCat(slug);
-    const url = slug ? `/?category=${encodeURIComponent(slug)}` : '/';
-    history.replaceState({category: slug}, '', url);
-    window.scrollTo({top: 0, behavior: 'smooth'});
-  }
-
-  function closeCategoryMenu(e) {
-    if (e && e.target !== document.getElementById('categoryOverlay')) return;
-    document.getElementById('categoryOverlay').classList.remove('open');
-  }
-
   // ===== FILTER BY CATEGORY =====
-  function filterCat(cat, btn) {
-    currentCat = cat;
-    // Update active filter tag
-    if (btn) {
-      document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
+  function setActiveCategoryButton(cat) {
+    document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+    if (!cat) {
+      const homeBtn = document.querySelector('.filter-tag');
+      if (homeBtn) homeBtn.classList.add('active');
+      return;
     }
-    loadStories(1, cat, currentSearch);
+    const btn = Array.from(document.querySelectorAll('.filter-tag')).find(t => {
+      const m = t.getAttribute('onclick') || '';
+      return m.includes(`filterCat('${cat}'`);
+    });
+    if (btn) btn.classList.add('active');
   }
+
+  function filterCat(cat, btn, addHistory = true) {
+    currentCat = cat || '';
+    setActiveCategoryButton(currentCat);
+    loadStories(1, currentCat, currentSearch, addHistory);
+  }
+
+  function changePage(page, addHistory = true) {
+    if (page < 1 || page > totalPages) return;
+    loadStories(page, currentCat, currentSearch, addHistory);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Android/Chrome Back button: restore previous category/page/search state.
+  window.addEventListener('popstate', () => {
+    const params = new URLSearchParams(window.location.search);
+    const cat = params.get('category') || '';
+    const page = Math.max(1, parseInt(params.get('page') || '1', 10) || 1);
+    const search = params.get('search') || '';
+    currentCat = cat;
+    currentSearch = search;
+    const input = document.getElementById('searchInput');
+    if (input) input.value = search;
+    setActiveCategoryButton(cat);
+    suppressHistory = true;
+    loadStories(page, cat, search).finally(() => { suppressHistory = false; });
+  });
 
   // ===== SEARCH =====
   function doSearch() {
     const q = document.getElementById('searchInput').value.trim();
-    loadStories(1, currentCat, q);
+    loadStories(1, currentCat, q, true);
   }
   document.getElementById('searchInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') doSearch();
@@ -949,9 +899,16 @@
   }
 
   // ===== INIT =====
-  const initialCategory = new URLSearchParams(window.location.search).get('category') || '';
+  const initialParams = new URLSearchParams(window.location.search);
+  const initialCategory = initialParams.get('category') || '';
+  const initialPage = Math.max(1, parseInt(initialParams.get('page') || '1', 10) || 1);
+  const initialSearch = initialParams.get('search') || '';
   currentCat = initialCategory;
-  loadStories(1, initialCategory, '');
+  currentSearch = initialSearch;
+  const initialSearchInput = document.getElementById('searchInput');
+  if (initialSearchInput) initialSearchInput.value = initialSearch;
+  setActiveCategoryButton(initialCategory);
+  loadCategories().finally(() => loadStories(initialPage, initialCategory, initialSearch));
 </script>
 </body>
 </html>
