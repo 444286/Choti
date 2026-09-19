@@ -709,7 +709,7 @@
 
     try {
       let url = `${API}/api/stories?page=${page}&limit=15`;
-      if (cat) url += `&category=${cat}`;
+      if (cat) url += `&category=${encodeURIComponent(cat)}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
 
       const res = await fetch(url);
@@ -740,9 +740,10 @@
       const imgHtml = s.image
         ? `<img src="${s.image}" alt="${s.title}" loading="lazy" />`
         : `<div class="no-img">📖</div>`;
-      const cats = (s.categories || []).map(c =>
-        `<span class="story-cat">${escapeHTML(categoryDisplayName(c))}</span>`
-      ).join('');
+      const cats = (s.categories || []).map(c => {
+        const slug = String(c?.slug || c || '');
+        return `<button class="story-cat" onclick="event.stopPropagation(); selectCategory(decodeURIComponent('${encodeURIComponent(slug)}'))">${escapeHTML(categoryDisplayName(c))}</button>`;
+      }).join('');
 
       return `
         <div class="story-card" onclick='openStory(${JSON.stringify(s.slug || '')}, ${JSON.stringify(s._id || '')})'>
@@ -792,17 +793,14 @@
 
   // ===== OPEN STORY PAGE =====
   function openStory(slug, id) {
-    // Slug থাকলে clean URL ব্যবহার হবে
+    // Only use a clean URL when the API actually has a slug.
+    // Old stories without a slug must use their MongoDB ID so they never show
+    // the false “গল্পটি পাওয়া যায়নি” page.
     if (slug) {
       window.location.href = `/${encodeURIComponent(slug)}/`;
       return;
     }
-
-    // পুরোনো story-তে slug না থাকলে ID দিয়ে story.html খুলবে
-    // এতে /story-এর মতো ভুল URL হবে না
-    if (id) {
-      window.location.href = `/story.html?id=${encodeURIComponent(id)}`;
-    }
+    if (id) window.location.href = `/story.html?id=${encodeURIComponent(id)}`;
   }
 
   function closeModal() {
@@ -862,7 +860,7 @@
     return name;
   }
 
-  async function showCategoryMenu(e) {
+  function showCategoryMenu(e) {
     if (e) e.preventDefault();
     const overlay = document.getElementById('categoryOverlay');
     const menu = document.getElementById('categoryMenu');
@@ -870,38 +868,11 @@
     const rect = nav.getBoundingClientRect();
     menu.style.top = `${Math.min(rect.bottom, window.innerHeight - 120)}px`;
     menu.style.left = `${Math.max(10, Math.min(rect.left, window.innerWidth - Math.min(360, window.innerWidth - 20) - 10))}px`;
+    const items = Object.entries(CATEGORY_NAME_MAP).map(([slug,name]) =>
+      `<button class="${currentCat === slug ? 'active' : ''}" onclick="selectCategory('${slug}')">${escapeHTML(name)}</button>`
+    ).join('');
+    menu.innerHTML = `<div class="category-menu-title">বিভাগ</div><button class="${!currentCat ? 'active' : ''}" onclick="selectCategory('')">সব গল্প</button>${items}`;
     overlay.classList.add('open');
-    menu.innerHTML = '<div class="category-menu-title">বিভাগ</div><div class="cat-loading">বিভাগ লোড হচ্ছে...</div>';
-
-    const fixedCategories = [
-      ['ojachar','অজাচার বাংলা চটি গল্প'],
-      ['kajer-mashi','কাজের মাসি চোদার গল্প'],
-      ['kajer-meye','কাজের মেয়ে চোদার গল্প'],
-      ['kumari-meye','কুমারী মেয়ে চোদার গল্প'],
-      ['grihobodhu','গৃহবধূ চোদন কাহিনী'],
-      ['gay','গে সেক্স চটি'],
-      ['gram-sex','গ্রাম সেক্সের বাংলা চটি গল্প'],
-      ['porkiya','পরকীয়া বাংলা চটি গল্প'],
-      ['mature','পরিপক্ক চোদাচুদি গল্প'],
-      ['protibeshi','প্রতিবেশী চোদার চটি গল্প'],
-      ['famous','ফেমাস বাংলা চটি গল্প'],
-      ['babaji','বাবাজী চোদার বাংলা চটি গল্প'],
-      ['somokami','সমকামী বাংলা চটি গল্প'],
-      ['best','সেরা বাংলা চটি'],
-      ['student','স্টুডেন্ট বাংলা চটি গল্প'],
-      ['swami-stri','স্বামী স্ত্রী বাংলা চটি গল্প'],
-      ['hijra','হিজরা শীলে বাংলা চটি গল্প']
-    ];
-
-    const items = fixedCategories.map(([slug,name]) => `
-      <button class="${currentCat === slug ? 'active' : ''}" onclick="selectCategory('${slug}')">${escapeHTML(name)}</button>
-    `).join('');
-
-    menu.innerHTML = `
-      <div class="category-menu-title">বিভাগ</div>
-      <button class="${!currentCat ? 'active' : ''}" onclick="selectCategory('')">সব গল্প</button>
-      ${items}
-    `;
   }
 
   function selectCategory(slug) {
