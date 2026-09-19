@@ -643,21 +643,32 @@
   let currentCat = '';
   let currentSearch = '';
   let totalPages = 1;
+  let suppressHistory = false;
   let categoryMap = {};
   let categoryList = [];
 
   // ===== LOAD STORIES =====
-  async function loadStories(page = 1, cat = '', search = '') {
+  async function loadStories(page = 1, cat = '', search = '', addHistory = false) {
     currentPage = page;
     currentCat = cat;
     currentSearch = search;
+
+    if (addHistory && !suppressHistory) {
+      const url = new URL(window.location.href);
+      if (cat) url.searchParams.set('category', cat); else url.searchParams.delete('category');
+      if (page > 1) url.searchParams.set('page', String(page)); else url.searchParams.delete('page');
+      if (search) url.searchParams.set('search', search); else url.searchParams.delete('search');
+      const newUrl = url.pathname + (url.search ? url.search : '');
+      const currentUrl = window.location.pathname + window.location.search;
+      if (currentUrl !== newUrl) history.pushState({category: cat, page, search}, '', newUrl);
+    }
 
     const section = document.getElementById('storiesSection');
     section.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><div>গল্প লোড হচ্ছে...</div></div>';
 
     try {
       await loadCategories();
-      let url = `${API}/api/stories?page=${page}&limit=10`;
+      let url = `${API}/api/stories?page=${page}&limit=15`;
       if (cat) url += `&category=${cat}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
 
@@ -687,7 +698,7 @@
       const top = document.getElementById('filterTags');
       if (top && categoryList.length) {
         top.innerHTML = categoryList.map(c =>
-          `<button class="filter-tag" onclick="filterCat('${String(c.slug).replace(/'/g, "\\'")}', this)">${c.icon || '🏷️'} ${escapeHtml(c.name)}</button>`
+          `<button class="filter-tag" onclick="filterCat('${String(c.slug).replace(/'/g, "\\'")}', this)">${escapeHtml(c.name)}</button>`
         ).join('');
       }
     } catch (e) {}
@@ -711,8 +722,8 @@
         ? `<img src="${s.image}" alt="${s.title}" loading="lazy" />`
         : `<div class="no-img">📖</div>`;
       const cats = (s.categories || []).map(c => {
-        const info = categoryMap[c] || { name: c, icon: '🏷️' };
-        return `<button type="button" class="story-cat" onclick="event.stopPropagation(); filterCat('${String(c).replace(/'/g, "\\'")}', this)">${info.icon ? info.icon + ' ' : ''}${escapeHtml(info.name || c)}</button>`;
+        const info = categoryMap[c] || { name: c };
+        return `<button type="button" class="story-cat" onclick="event.stopPropagation(); filterCat('${String(c).replace(/'/g, "\\'")}', this)">${escapeHtml(info.name || c)}</button>`;
       }).join('');
 
       return `
@@ -751,13 +762,13 @@
     }
 
     wrap.innerHTML = `
-      <button class="page-prev" onclick="loadStories(${Math.max(1, page-1)}, '${currentCat}', '${currentSearch}')" ${page === 1 ? 'disabled' : ''}>← Previous</button>
+      <button class="page-prev" onclick="changePage(${Math.max(1, page-1)})" ${page === 1 ? 'disabled' : ''}>← Previous</button>
       ${pages.map(p =>
         p === '...'
           ? `<span class="page-dots">...</span>`
-          : `<button class="page-btn ${p === page ? 'active' : ''}" onclick="loadStories(${p}, '${currentCat}', '${currentSearch}')">${p}</button>`
+          : `<button class="page-btn ${p === page ? 'active' : ''}" onclick="changePage(${p})">${p}</button>`
       ).join('')}
-      <button class="page-next" onclick="loadStories(${Math.min(totalPages, page+1)}, '${currentCat}', '${currentSearch}')" ${page === totalPages ? 'disabled' : ''}>Next →</button>
+      <button class="page-next" onclick="changePage(${Math.min(totalPages, page+1)})" ${page === totalPages ? 'disabled' : ''}>Next →</button>
     `;
   }
 
@@ -828,28 +839,28 @@
   function filterCat(cat, btn, addHistory = true) {
     currentCat = cat || '';
     setActiveCategoryButton(currentCat);
-
-    const url = new URL(window.location.href);
-    if (currentCat) url.searchParams.set('category', currentCat);
-    else url.searchParams.delete('category');
-
-    const newUrl = url.pathname + (url.search ? url.search : '');
-    if (addHistory) {
-      const currentUrl = window.location.pathname + window.location.search;
-      if (currentUrl !== newUrl) {
-        history.pushState({ category: currentCat }, '', newUrl);
-      }
-    }
-    loadStories(1, currentCat, currentSearch);
+    loadStories(1, currentCat, currentSearch, addHistory);
   }
 
-  // Android/Chrome Back button: restore the previous category/home state.
+  function changePage(page, addHistory = true) {
+    if (page < 1 || page > totalPages) return;
+    loadStories(page, currentCat, currentSearch, addHistory);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Android/Chrome Back button: restore previous category/page/search state.
   window.addEventListener('popstate', () => {
     const params = new URLSearchParams(window.location.search);
     const cat = params.get('category') || '';
+    const page = Math.max(1, parseInt(params.get('page') || '1', 10) || 1);
+    const search = params.get('search') || '';
     currentCat = cat;
+    currentSearch = search;
+    const input = document.getElementById('searchInput');
+    if (input) input.value = search;
     setActiveCategoryButton(cat);
-    loadStories(1, cat, currentSearch);
+    suppressHistory = true;
+    loadStories(page, cat, search).finally(() => { suppressHistory = false; });
   });
 
   // ===== SEARCH =====
@@ -888,10 +899,16 @@
   }
 
   // ===== INIT =====
-  const initialCategory = new URLSearchParams(window.location.search).get('category') || '';
+  const initialParams = new URLSearchParams(window.location.search);
+  const initialCategory = initialParams.get('category') || '';
+  const initialPage = Math.max(1, parseInt(initialParams.get('page') || '1', 10) || 1);
+  const initialSearch = initialParams.get('search') || '';
   currentCat = initialCategory;
+  currentSearch = initialSearch;
+  const initialSearchInput = document.getElementById('searchInput');
+  if (initialSearchInput) initialSearchInput.value = initialSearch;
   setActiveCategoryButton(initialCategory);
-  loadCategories().finally(() => loadStories(1, initialCategory, ''));
+  loadCategories().finally(() => loadStories(initialPage, initialCategory, initialSearch));
 </script>
 </body>
 </html>
