@@ -1,1 +1,1 @@
-/:slug/ /story.html 200
+/:slug/ /story.html?slug=:slug 200
