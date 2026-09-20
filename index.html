@@ -660,10 +660,6 @@
       .hero-right-text { display: none; }
       .nav-link { padding: 10px 12px; font-size: 13px; }
     }
-
-.hero {
-  display: none !important;
-}
   </style>
 </head>
 <body>
@@ -671,7 +667,7 @@
 <!-- ===== HEADER ===== -->
 <header class="header">
   <div class="header-top">
-    <button class="hamburger" aria-label="Menu">
+    <button class="hamburger" id="hamburgerBtn" aria-label="Menu" onclick="toggleCategoryOverlay(); return false;">
       <span></span><span></span><span></span>
     </button>
     <div class="logo-wrap">
@@ -1036,12 +1032,16 @@
       }
 
       if (navBtn) navBtn.classList.add('active');
+      const hamburgerBtn = document.getElementById('hamburgerBtn');
+      if (hamburgerBtn) hamburgerBtn.classList.add('active');
     } else {
       overlay.classList.remove('open');
       document.body.classList.remove('category-menu-open');
       panel.style.top = '';
       panel.style.left = '';
       if (navBtn) navBtn.classList.remove('active');
+      const hamburgerBtn = document.getElementById('hamburgerBtn');
+      if (hamburgerBtn) hamburgerBtn.classList.remove('active');
     }
   }
 
