@@ -660,7 +660,29 @@
       .hero-right-text { display: none; }
       .nav-link { padding: 10px 12px; font-size: 13px; }
     }
-  </style>
+  
+/* Full clickable home-logo area */
+.logo-home-link{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  color:inherit;
+  -webkit-tap-highlight-color:transparent;
+  cursor:pointer;
+}
+.logo-home-link .logo-wrap{
+  width:100%;
+  height:100%;
+}
+.logo-home-link:visited,
+.logo-home-link:hover,
+.logo-home-link:active{
+  color:inherit;
+  text-decoration:none;
+}
+
+</style>
 </head>
 <body>
 
@@ -670,10 +692,12 @@
     <button class="hamburger" id="hamburgerBtn" aria-label="Menu" onclick="toggleCategoryOverlay(); return false;">
       <span></span><span></span><span></span>
     </button>
-    <div class="logo-wrap">
-      <div class="logo-text">Bangla Choti Kahinii<span class="logo-leaf">🌿</span></div>
-      <div class="tagline">বাংলা গল্পের সবচেয়ে বড় ঠিকানা</div>
-    </div>
+    <a href="https://banglachoti.pages.dev" class="logo-home-link" aria-label="Bangla Choti Kahinii Home">
+      <div class="logo-wrap">
+        <div class="logo-text">Bangla Choti Kahinii<span class="logo-leaf">🌿</span></div>
+        <div class="tagline">বাংলা গল্পের সবচেয়ে বড় ঠিকানা</div>
+      </div>
+    </a>
     <div class="header-icons">
       <button id="darkToggle" title="Dark Mode">🌙</button>
       <button id="searchToggle" title="Search">🔍</button>
