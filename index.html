@@ -151,6 +151,107 @@
       50% { box-shadow: 0 0 0 7px rgba(230,57,70,0); }
     }
 
+
+    /* ===== DYNAMIC CATEGORY OVERLAY ===== */
+    .category-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1800;
+      background: rgba(0,0,0,0.48);
+    }
+    .category-overlay.open {
+      display: block;
+    }
+    .category-panel {
+      position: absolute;
+      top: 0;
+      left: 110px;
+      width: min(430px, calc(100vw - 130px));
+      max-height: calc(100vh - 10px);
+      overflow-y: auto;
+      background: #303030;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.35);
+      border-radius: 0 0 8px 8px;
+      padding: 8px 0 14px;
+    }
+    .category-panel-title {
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      padding: 12px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .category-panel-close {
+      border: 0;
+      background: rgba(255,255,255,0.10);
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .category-overlay-list {
+      display: flex;
+      flex-direction: column;
+    }
+    .category-overlay-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: #fff;
+      text-align: left;
+      padding: 13px 18px;
+      font-family: 'Hind Siliguri', sans-serif;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .category-overlay-item:hover,
+    .category-overlay-item:active {
+      background: rgba(255,255,255,0.10);
+    }
+    .category-overlay-item.active {
+      background: rgba(46,160,92,0.28);
+      color: #8cffb5;
+    }
+    .category-overlay-empty {
+      color: #bbb;
+      padding: 18px;
+      text-align: center;
+      font-size: 14px;
+    }
+    body.category-menu-open {
+      overflow: hidden;
+    }
+
+    @media (max-width: 600px) {
+      .category-panel {
+        top: 0;
+        left: 0;
+        width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        padding-bottom: 20px;
+      }
+      .category-panel-title {
+        font-size: 17px;
+        padding: 13px 16px;
+      }
+      .category-overlay-item {
+        font-size: 16px;
+        padding: 13px 18px;
+      }
+    }
+
     /* ===== HERO BANNER ===== */
     .hero {
       background: linear-gradient(135deg, #0d3d22 0%, #1a5c38 50%, #0d3d22 100%);
@@ -555,12 +656,6 @@
       .hero-right-text { display: none; }
       .nav-link { padding: 10px 12px; font-size: 13px; }
     }
-
-
-.hero {
-  display: none !important;
-}
-
   </style>
 </head>
 <body>
@@ -586,13 +681,26 @@
 <nav class="nav">
   <div class="nav-inner">
     <a href="#" class="nav-link active" onclick="filterCat(''); return false;">🏠 হোম</a>
-    <a href="#filterTags" class="nav-link" onclick="document.getElementById('filterTags').scrollIntoView({behavior:'smooth', block:'center'}); return false;">বিভাগ ▾</a>
+    <a href="#" id="categoryNavBtn" class="nav-link" onclick="toggleCategoryOverlay(); return false;">বিভাগ <span id="categoryChevron">⌄</span></a>
     <a href="#" class="nav-link" onclick="showSubmitModal(); return false;">গল্প লিখে পাঠান</a>
     <a href="#" class="nav-link" onclick="filterCat('hot'); return false;">সেরা গল্প</a>
     <a href="#" class="nav-link">যোগাযোগ</a>
     <button class="nav-live">🔥 LIVE CAMS</button>
   </div>
 </nav>
+
+<!-- ===== CATEGORY OVERLAY ===== -->
+<div class="category-overlay" id="categoryOverlay" onclick="closeCategoryOverlay(event)">
+  <div class="category-panel" onclick="event.stopPropagation()">
+    <div class="category-panel-title">
+      <span>📚 বিভাগ</span>
+      <button class="category-panel-close" onclick="toggleCategoryOverlay(false)" aria-label="Close">✕</button>
+    </div>
+    <div class="category-overlay-list" id="categoryOverlayList">
+      <div class="category-overlay-empty">বিভাগ লোড হচ্ছে...</div>
+    </div>
+  </div>
+</div>
 
 <!-- ===== HERO ===== -->
 <div class="hero">
@@ -704,6 +812,7 @@
       });
 
       renderCategoryMenu();
+      renderCategoryOverlay();
       return categoryList;
     } catch (e) {
       console.error('Category load error:', e);
@@ -855,6 +964,68 @@
     if (e.target === this) closeModal();
   });
 
+  // ===== CATEGORY OVERLAY =====
+  function renderCategoryOverlay() {
+    const list = document.getElementById('categoryOverlayList');
+    if (!list) return;
+
+    if (!categoryList.length) {
+      list.innerHTML = '<div class="category-overlay-empty">কোনো বিভাগ পাওয়া যায়নি।</div>';
+      return;
+    }
+
+    const items = [
+      `<button type="button" class="category-overlay-item${!currentCat ? ' active' : ''}" onclick="selectOverlayCategory('')">📚 <span>সব গল্প</span></button>`
+    ];
+
+    categoryList.forEach(c => {
+      if (!c || !c.slug) return;
+      const slug = String(c.slug);
+      const icon = escapeHtml(c.icon || '📖');
+      const name = escapeHtml(c.name || slug);
+      const safeSlug = slug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      items.push(
+        `<button type="button" class="category-overlay-item${currentCat === slug ? ' active' : ''}" ` +
+        `onclick="selectOverlayCategory('${safeSlug}')">${icon} <span>${name}</span></button>`
+      );
+    });
+
+    list.innerHTML = items.join('');
+  }
+
+  function toggleCategoryOverlay(force) {
+    const overlay = document.getElementById('categoryOverlay');
+    if (!overlay) return;
+
+    const shouldOpen = typeof force === 'boolean'
+      ? force
+      : !overlay.classList.contains('open');
+
+    if (shouldOpen) {
+      renderCategoryOverlay();
+      overlay.classList.add('open');
+      document.body.classList.add('category-menu-open');
+      const nav = document.getElementById('categoryNavBtn');
+      if (nav) nav.classList.add('active');
+    } else {
+      overlay.classList.remove('open');
+      document.body.classList.remove('category-menu-open');
+      const nav = document.getElementById('categoryNavBtn');
+      if (nav) nav.classList.remove('active');
+    }
+  }
+
+  function closeCategoryOverlay(e) {
+    if (e && e.target !== e.currentTarget) return;
+    toggleCategoryOverlay(false);
+  }
+
+  function selectOverlayCategory(slug) {
+    toggleCategoryOverlay(false);
+    filterCat(slug || '', null, true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   // ===== FILTER BY CATEGORY =====
   function setActiveCategoryButton(cat) {
     document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
@@ -872,6 +1043,7 @@
   function filterCat(cat, btn, addHistory = true) {
     currentCat = cat || '';
     setActiveCategoryButton(currentCat);
+    renderCategoryOverlay();
     loadStories(1, currentCat, currentSearch, addHistory);
   }
 
@@ -930,6 +1102,10 @@
     }
     localStorage.setItem('bookmarks', JSON.stringify(saved));
   }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') toggleCategoryOverlay(false);
+  });
 
   // ===== INIT =====
   const initialParams = new URLSearchParams(window.location.search);
