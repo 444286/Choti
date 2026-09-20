@@ -1082,6 +1082,8 @@
 
     const exactNames = [
       'সেরা বাংলা গল্প',
+      'সেরা বাংলা চটি',
+      'সেরা বাংলা চটি গল্প',
       'সেরা গল্প',
       'জনপ্রিয়',
       'জনপ্রিয়'
@@ -1089,6 +1091,8 @@
 
     const exactSlugs = [
       'serabanglagolpo',
+      'serabanglachoti',
+      'serabanglachotigolpo',
       'seragolpo',
       'popular',
       'jonopriyo',
@@ -1098,7 +1102,10 @@
     const found = (categoryList || []).find(c => {
       const name = normalize(c && (c.name || c.title || c.label));
       const slug = normalize(c && c.slug);
-      return exactNames.includes(name) || exactSlugs.includes(slug);
+      return exactNames.includes(name)
+        || exactSlugs.includes(slug)
+        || (name.includes('সেরা বাংলা') && name.includes('চটি'))
+        || (slug.includes('serabangla') && slug.includes('choti'));
     });
 
     if (found && found.slug) {
@@ -1109,7 +1116,10 @@
         const retry = (categoryList || []).find(c => {
           const name = normalize(c && (c.name || c.title || c.label));
           const slug = normalize(c && c.slug);
-          return exactNames.includes(name) || exactSlugs.includes(slug);
+          return exactNames.includes(name)
+            || exactSlugs.includes(slug)
+            || (name.includes('সেরা বাংলা') && name.includes('চটি'))
+            || (slug.includes('serabangla') && slug.includes('choti'));
         });
         if (retry && retry.slug) {
           filterCat(String(retry.slug), null, true);
