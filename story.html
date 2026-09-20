@@ -467,18 +467,23 @@ body{
   🌿 গল্প পড়ুন, কল্পনার জগতে হারিয়ে যান...
 </footer>
 
+
 <script>
 
 const API =
   'https://choti.onrender.com';
+
 
 // =====================================================
 // BASIC HELPERS
 // =====================================================
 
 function goHome(){
+
   window.location.href = '/';
+
 }
+
 
 function escapeHTML(value){
 
@@ -493,21 +498,29 @@ function escapeHTML(value){
         "'":'&#039;'
       }[match])
     );
+
 }
+
 
 function absoluteUrl(value){
 
   try{
+
     return new URL(
       value,
       window.location.origin
     ).href;
+
+  }catch(e){
+
+    return String(
+      value || ''
+    );
+
   }
 
-  catch(e){
-    return String(value || '');
-  }
 }
+
 
 function stripHtml(value){
 
@@ -524,7 +537,9 @@ function stripHtml(value){
   )
     .replace(/\s+/g,' ')
     .trim();
+
 }
+
 
 function makeDescription(story){
 
@@ -539,16 +554,19 @@ function makeDescription(story){
       stripHtml(
         story.content
       ).slice(0,155);
+
   }
 
   return (
     description ||
     `${story.title || 'বাংলা গল্প'} গল্পটি Bangla Choti Kahinii-তে পড়ুন।`
   );
+
 }
 
+
 // =====================================================
-// META HELPERS
+// META
 // =====================================================
 
 function setMeta(
@@ -562,12 +580,16 @@ function setMeta(
     );
 
   if(el){
+
     el.setAttribute(
       'content',
       content
     );
+
   }
+
 }
+
 
 function setProp(
   id,
@@ -583,8 +605,11 @@ function setProp(
       'content',
       content
     );
+
   }
+
 }
+
 
 // =====================================================
 // STORY SEO
@@ -612,27 +637,19 @@ function setStorySEO(story){
 
     canonicalUrl =
       `${window.location.origin}${window.location.pathname}`;
+
   }
 
-  // ---------------------------------------------------
-  // TITLE
-  // ---------------------------------------------------
 
   document.title =
     `${title} | Bangla Choti Kahinii`;
 
-  // ---------------------------------------------------
-  // DESCRIPTION
-  // ---------------------------------------------------
 
   setMeta(
     'description',
     description
   );
 
-  // ---------------------------------------------------
-  // CANONICAL
-  // ---------------------------------------------------
 
   const canonical =
     document.getElementById(
@@ -643,11 +660,9 @@ function setStorySEO(story){
 
     canonical.href =
       canonicalUrl;
+
   }
 
-  // ---------------------------------------------------
-  // OPEN GRAPH
-  // ---------------------------------------------------
 
   setProp(
     'ogTitle',
@@ -664,6 +679,7 @@ function setStorySEO(story){
     canonicalUrl
   );
 
+
   if(story.image){
 
     setProp(
@@ -672,11 +688,9 @@ function setStorySEO(story){
         story.image
       )
     );
+
   }
 
-  // ---------------------------------------------------
-  // TWITTER
-  // ---------------------------------------------------
 
   setProp(
     'twitterTitle',
@@ -688,6 +702,7 @@ function setStorySEO(story){
     description
   );
 
+
   if(story.image){
 
     setProp(
@@ -696,11 +711,9 @@ function setStorySEO(story){
         story.image
       )
     );
+
   }
 
-  // ---------------------------------------------------
-  // REMOVE OLD SCHEMA
-  // ---------------------------------------------------
 
   document
     .querySelectorAll(
@@ -710,9 +723,6 @@ function setStorySEO(story){
       el => el.remove()
     );
 
-  // ---------------------------------------------------
-  // ARTICLE SCHEMA
-  // ---------------------------------------------------
 
   const schema = {
 
@@ -770,13 +780,16 @@ function setStorySEO(story){
 
   };
 
+
   if(story.createdAt){
 
     schema.datePublished =
       new Date(
         story.createdAt
       ).toISOString();
+
   }
+
 
   if(story.updatedAt){
 
@@ -791,7 +804,9 @@ function setStorySEO(story){
       new Date(
         story.createdAt
       ).toISOString();
+
   }
+
 
   if(story.image){
 
@@ -800,7 +815,9 @@ function setStorySEO(story){
         story.image
       )
     ];
+
   }
+
 
   const script =
     document.createElement(
@@ -822,9 +839,6 @@ function setStorySEO(story){
     script
   );
 
-  // ---------------------------------------------------
-  // BREADCRUMB
-  // ---------------------------------------------------
 
   const breadcrumb =
     document.getElementById(
@@ -839,8 +853,11 @@ function setStorySEO(story){
       <span>›</span>
       <span>${escapeHTML(title)}</span>
       `;
+
   }
+
 }
+
 
 // =====================================================
 // GET CATEGORIES
@@ -857,24 +874,29 @@ async function getCategories(){
           headers:{
             Accept:
               'application/json'
-          }
+          },
+
+          cache:'no-store'
         }
       );
 
+
     if(!response.ok){
+
       return [];
+
     }
+
 
     const data =
       await response.json();
+
 
     return Array.isArray(data)
       ? data
       : [];
 
-  }
-
-  catch(error){
+  }catch(error){
 
     console.error(
       'Category error:',
@@ -882,11 +904,14 @@ async function getCategories(){
     );
 
     return [];
+
   }
+
 }
 
+
 // =====================================================
-// GET RELATED STORIES
+// GET RELATED
 // =====================================================
 
 async function getStoryLinks(id){
@@ -900,9 +925,12 @@ async function getStoryLinks(id){
           headers:{
             Accept:
               'application/json'
-          }
+          },
+
+          cache:'no-store'
         }
       );
+
 
     if(!response.ok){
 
@@ -910,23 +938,28 @@ async function getStoryLinks(id){
         series:{
           parts:[]
         },
+
         related:[]
       };
+
     }
+
 
     const data =
       await response.json();
 
+
     return data || {
+
       series:{
         parts:[]
       },
+
       related:[]
     };
 
-  }
 
-  catch(error){
+  }catch(error){
 
     console.error(
       'Related stories error:',
@@ -934,13 +967,18 @@ async function getStoryLinks(id){
     );
 
     return {
+
       series:{
         parts:[]
       },
+
       related:[]
     };
+
   }
+
 }
+
 
 // =====================================================
 // CATEGORY MAP
@@ -953,18 +991,24 @@ function categoryMap(list){
   (list || []).forEach(
     category => {
 
-      if(category && category.slug){
+      if(
+        category &&
+        category.slug
+      ){
 
         map[
           category.slug
         ] = category;
+
       }
 
     }
   );
 
   return map;
+
 }
+
 
 // =====================================================
 // OPEN CATEGORY
@@ -976,8 +1020,11 @@ function openCategory(slug){
 
     window.location.href =
       `/?category=${encodeURIComponent(slug)}`;
+
   }
+
 }
+
 
 // =====================================================
 // STORY LINK
@@ -985,18 +1032,30 @@ function openCategory(slug){
 
 function storyLink(item){
 
-  if(item && item.slug){
+  if(
+    item &&
+    item.slug
+  ){
 
     return `/${encodeURIComponent(item.slug)}/`;
+
   }
 
-  if(item && item._id){
+
+  if(
+    item &&
+    item._id
+  ){
 
     return `/story.html?id=${encodeURIComponent(item._id)}`;
+
   }
 
+
   return '/';
+
 }
+
 
 // =====================================================
 // ERROR
@@ -1009,8 +1068,10 @@ function showError(){
       'app'
     );
 
+
   app.className =
     'error';
+
 
   app.innerHTML =
     `
@@ -1029,7 +1090,251 @@ function showError(){
       ← হোমে ফিরে যান
     </a>
     `;
+
 }
+
+
+// =====================================================
+// GET STORY BY SLUG
+// =====================================================
+
+async function getStoryBySlug(slug){
+
+  if(!slug){
+
+    return null;
+
+  }
+
+
+  const cleanSlug =
+    String(slug)
+      .trim()
+      .replace(/^\/+|\/+$/g,'');
+
+
+  if(!cleanSlug){
+
+    return null;
+
+  }
+
+
+  const url =
+    `${API}/api/stories/slug/${encodeURIComponent(cleanSlug)}`;
+
+
+  console.log(
+    '🔎 Story slug:',
+    cleanSlug
+  );
+
+
+  console.log(
+    '🌐 API:',
+    url
+  );
+
+
+  try{
+
+    const response =
+      await fetch(
+        url,
+        {
+          method:'GET',
+
+          headers:{
+            Accept:
+              'application/json'
+          },
+
+          cache:'no-store'
+        }
+      );
+
+
+    if(response.ok){
+
+      const data =
+        await response.json();
+
+
+      if(
+        data &&
+        data._id
+      ){
+
+        return data;
+
+      }
+
+    }
+
+
+    console.warn(
+      'Slug API failed:',
+      response.status
+    );
+
+
+  }catch(error){
+
+    console.error(
+      'Slug API error:',
+      error
+    );
+
+  }
+
+
+  return null;
+
+}
+
+
+// =====================================================
+// FALLBACK STORY SEARCH
+// =====================================================
+
+async function findStoryFallback(slug){
+
+  try{
+
+    const response =
+      await fetch(
+        `${API}/api/stories?limit=100&page=1`,
+        {
+          method:'GET',
+
+          headers:{
+            Accept:
+              'application/json'
+          },
+
+          cache:'no-store'
+        }
+      );
+
+
+    if(!response.ok){
+
+      return null;
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    let stories = [];
+
+
+    if(Array.isArray(data)){
+
+      stories = data;
+
+    }else if(
+      data &&
+      Array.isArray(
+        data.stories
+      )
+    ){
+
+      stories =
+        data.stories;
+
+    }
+
+
+    const target =
+      String(slug)
+        .trim();
+
+
+    const found =
+      stories.find(
+        item =>
+          String(
+            item.slug || ''
+          ).trim() === target
+      );
+
+
+    if(
+      found &&
+      found._id
+    ){
+
+      console.log(
+        '✅ Fallback story found:',
+        found._id
+      );
+
+
+      try{
+
+        const idResponse =
+          await fetch(
+            `${API}/api/stories/${encodeURIComponent(found._id)}`,
+            {
+              headers:{
+                Accept:
+                  'application/json'
+              },
+
+              cache:'no-store'
+            }
+          );
+
+
+        if(idResponse.ok){
+
+          const fullStory =
+            await idResponse.json();
+
+
+          if(
+            fullStory &&
+            fullStory._id
+          ){
+
+            return fullStory;
+
+          }
+
+        }
+
+      }catch(error){
+
+        console.warn(
+          'ID fallback failed:',
+          error
+        );
+
+      }
+
+
+      return found;
+
+    }
+
+
+  }catch(error){
+
+    console.error(
+      'Fallback list error:',
+      error
+    );
+
+  }
+
+
+  return null;
+
+}
+
 
 // =====================================================
 // LOAD STORY
@@ -1042,139 +1347,195 @@ async function loadStory(){
       'app'
     );
 
-  const pathname =
-    window.location.pathname;
-
-  const parts =
-    pathname
-      .split('/')
-      .filter(Boolean);
-
-  let pathPart =
-    parts.length
-      ? parts[parts.length - 1]
-      : '';
 
   try{
 
-    pathPart =
-      decodeURIComponent(
-        pathPart
+    const pathname =
+      window.location.pathname;
+
+
+    console.log(
+      '📍 Current pathname:',
+      pathname
+    );
+
+
+    const parts =
+      pathname
+        .split('/')
+        .filter(Boolean);
+
+
+    let pathPart = '';
+
+
+    if(parts.length){
+
+      pathPart =
+        parts[parts.length - 1];
+
+    }
+
+
+    try{
+
+      pathPart =
+        decodeURIComponent(
+          pathPart
+        );
+
+    }catch(e){
+
+      console.warn(
+        'URL decode failed:',
+        e
       );
-  }
 
-  catch(e){
+    }
 
-    console.warn(
-      'Could not decode URL:',
-      e
+
+    const params =
+      new URLSearchParams(
+        window.location.search
+      );
+
+
+    const querySlug =
+      params.get('slug');
+
+
+    const oldId =
+      params.get('id');
+
+
+    const isPlaceholder =
+      !pathPart ||
+      pathPart === 'story' ||
+      pathPart === 'story.html' ||
+      pathPart === 'index.html';
+
+
+    let requestedSlug =
+      querySlug ||
+      (
+        !isPlaceholder
+          ? pathPart
+          : ''
+      );
+
+
+    if(requestedSlug){
+
+      requestedSlug =
+        String(
+          requestedSlug
+        )
+        .trim()
+        .replace(
+          /^\/+|\/+$/g,
+          ''
+        );
+
+    }
+
+
+    console.log(
+      '🎯 Requested slug:',
+      requestedSlug
     );
-  }
 
-  const params =
-    new URLSearchParams(
-      window.location.search
-    );
-
-  const querySlug =
-    params.get('slug');
-
-  const oldId =
-    params.get('id');
-
-  // ---------------------------------------------------
-  // IDENTIFY STORY URL
-  // ---------------------------------------------------
-
-  const isPlaceholder =
-    !pathPart ||
-    pathPart === 'story' ||
-    pathPart === 'story.html' ||
-    pathPart === 'index.html';
-
-  const requestedSlug =
-    querySlug ||
-    (
-      !isPlaceholder
-        ? pathPart
-        : ''
-    );
-
-  try{
 
     let story = null;
 
+
     // =================================================
-    // SLUG URL
+    // 1. SLUG API
     // =================================================
 
     if(requestedSlug){
 
-      const slugUrl =
-        `${API}/api/stories/slug/${encodeURIComponent(requestedSlug)}`;
-
-      const response =
-        await fetch(
-          slugUrl,
-          {
-            method:'GET',
-
-            headers:{
-              Accept:
-                'application/json'
-            },
-
-            cache:'no-store'
-          }
+      story =
+        await getStoryBySlug(
+          requestedSlug
         );
 
-      if(response.ok){
-
-        story =
-          await response.json();
-
-      }else{
-
-        console.warn(
-          'Story slug API returned:',
-          response.status
-        );
-      }
     }
 
+
     // =================================================
-    // OLD ID URL
+    // 2. FALLBACK STORY LIST
     // =================================================
 
-    else if(oldId){
+    if(
+      !story &&
+      requestedSlug
+    ){
 
-      const idUrl =
-        `${API}/api/stories/${encodeURIComponent(oldId)}`;
+      console.log(
+        '↪ Trying fallback story list...'
+      );
 
-      const response =
-        await fetch(
-          idUrl,
-          {
-            method:'GET',
 
-            headers:{
-              Accept:
-                'application/json'
-            },
-
-            cache:'no-store'
-          }
+      story =
+        await findStoryFallback(
+          requestedSlug
         );
 
-      if(response.ok){
-
-        story =
-          await response.json();
-      }
     }
 
+
     // =================================================
-    // STORY NOT FOUND
+    // 3. OLD ID URL
+    // =================================================
+
+    if(
+      !story &&
+      oldId
+    ){
+
+      try{
+
+        const idUrl =
+          `${API}/api/stories/${encodeURIComponent(oldId)}`;
+
+
+        const response =
+          await fetch(
+            idUrl,
+            {
+              method:'GET',
+
+              headers:{
+                Accept:
+                  'application/json'
+              },
+
+              cache:'no-store'
+            }
+          );
+
+
+        if(response.ok){
+
+          story =
+            await response.json();
+
+        }
+
+      }catch(error){
+
+        console.error(
+          'ID API error:',
+          error
+        );
+
+      }
+
+    }
+
+
+    // =================================================
+    // NOT FOUND
     // =================================================
 
     if(
@@ -1185,7 +1546,9 @@ async function loadStory(){
       throw new Error(
         'Story not found'
       );
+
     }
+
 
     // =================================================
     // SEO
@@ -1194,6 +1557,7 @@ async function loadStory(){
     setStorySEO(
       story
     );
+
 
     // =================================================
     // DATE
@@ -1208,6 +1572,7 @@ async function loadStory(){
           )
         : '';
 
+
     // =================================================
     // CATEGORIES
     // =================================================
@@ -1215,10 +1580,12 @@ async function loadStory(){
     const categories =
       await getCategories();
 
+
     const categoryLookup =
       categoryMap(
         categories
       );
+
 
     const categoryItems =
       Array.isArray(
@@ -1226,6 +1593,7 @@ async function loadStory(){
       )
         ? story.categories
         : [];
+
 
     const catHtml =
       categoryItems
@@ -1239,6 +1607,7 @@ async function loadStory(){
                 name: slug
               };
 
+
             const safeSlug =
               String(slug)
                 .replace(
@@ -1249,6 +1618,7 @@ async function loadStory(){
                   /'/g,
                   "\\'"
                 );
+
 
             return `
               <button
@@ -1261,18 +1631,21 @@ async function loadStory(){
                 )}
               </button>
             `;
+
           }
         )
         .join('');
 
+
     // =================================================
-    // RELATED / SERIES
+    // RELATED
     // =================================================
 
     const links =
       await getStoryLinks(
         story._id
       );
+
 
     const partsList =
       links.series &&
@@ -1282,6 +1655,7 @@ async function loadStory(){
         ? links.series.parts
         : [];
 
+
     const relatedList =
       Array.isArray(
         links.related
@@ -1289,14 +1663,15 @@ async function loadStory(){
         ? links.related
         : [];
 
+
     // =================================================
-    // SERIES ITEMS
+    // SERIES
     // =================================================
 
     const optionItems =
       partsList
         .map(
-          (item, index) => {
+          (item,index) => {
 
             return `
               <li>
@@ -1312,9 +1687,11 @@ async function loadStory(){
                 </a>
               </li>
             `;
+
           }
         )
         .join('');
+
 
     // =================================================
     // RELATED ITEMS
@@ -1339,15 +1716,18 @@ async function loadStory(){
                 </a>
               </li>
             `;
+
           }
         )
         .join('');
+
 
     // =================================================
     // LINKS HTML
     // =================================================
 
     let linksHtml = '';
+
 
     if(partsList.length){
 
@@ -1364,7 +1744,9 @@ async function loadStory(){
 
         </section>
       `;
+
     }
+
 
     if(
       relatedList.length &&
@@ -1384,7 +1766,9 @@ async function loadStory(){
 
         </section>
       `;
+
     }
+
 
     if(
       !partsList.length &&
@@ -1404,7 +1788,9 @@ async function loadStory(){
 
         </section>
       `;
+
     }
+
 
     // =================================================
     // CATEGORY HTML
@@ -1427,8 +1813,9 @@ async function loadStory(){
         `
         : '';
 
+
     // =================================================
-    // COVER IMAGE
+    // COVER
     // =================================================
 
     const image =
@@ -1450,12 +1837,14 @@ async function loadStory(){
         `
         : '';
 
+
     // =================================================
-    // RENDER STORY
+    // RENDER
     // =================================================
 
     app.className =
       'article';
+
 
     app.innerHTML =
       `
@@ -1468,6 +1857,7 @@ async function loadStory(){
           )}
         </h1>
 
+
         <div class="meta">
 
           <span>
@@ -1478,6 +1868,7 @@ async function loadStory(){
             )}
           </span>
 
+
           ${
             date
               ? `
@@ -1487,6 +1878,7 @@ async function loadStory(){
               `
               : ''
           }
+
 
           <span>
             👁
@@ -1505,7 +1897,9 @@ async function loadStory(){
 
       </div>
 
+
       ${image}
+
 
       <article
         class="content"
@@ -1515,23 +1909,28 @@ async function loadStory(){
         ${story.content || ''}
       </article>
 
+
       ${categoryHtml}
+
 
       ${linksHtml}
       `;
 
-  }
 
-  catch(error){
+  }catch(error){
 
     console.error(
       '❌ Story loading error:',
       error
     );
 
+
     showError();
+
   }
+
 }
+
 
 // =====================================================
 // START
@@ -1542,4 +1941,4 @@ loadStory();
 </script>
 
 </body>
-</html>
+  </html>
