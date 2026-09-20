@@ -152,49 +152,55 @@
     }
 
 
-    /* ===== DYNAMIC CATEGORY OVERLAY ===== */
+    /* ===== DYNAMIC CATEGORY DROPDOWN ===== */
     .category-overlay {
       display: none;
       position: fixed;
       inset: 0;
       z-index: 1800;
-      background: rgba(0,0,0,0.48);
+      background: transparent;
     }
     .category-overlay.open {
       display: block;
     }
     .category-panel {
-      position: absolute;
+      position: fixed;
       top: 0;
-      left: 110px;
-      width: min(430px, calc(100vw - 130px));
-      max-height: calc(100vh - 10px);
+      left: 0;
+      width: 285px;
+      max-width: calc(100vw - 12px);
+      max-height: min(72vh, 620px);
       overflow-y: auto;
       background: #303030;
-      box-shadow: 0 12px 35px rgba(0,0,0,0.35);
-      border-radius: 0 0 8px 8px;
-      padding: 8px 0 14px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.32);
+      border-radius: 0 0 5px 5px;
+      padding: 0 0 8px;
     }
     .category-panel-title {
       color: #fff;
-      font-size: 18px;
-      font-weight: 700;
-      padding: 12px 18px;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 10px 14px;
       border-bottom: 1px solid rgba(255,255,255,0.10);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      background: #303030;
+      z-index: 2;
     }
     .category-panel-close {
       border: 0;
-      background: rgba(255,255,255,0.10);
+      background: transparent;
       color: #fff;
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       cursor: pointer;
-      font-size: 18px;
+      font-size: 17px;
+      line-height: 28px;
     }
     .category-overlay-list {
       display: flex;
@@ -203,21 +209,22 @@
     .category-overlay-item {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       width: 100%;
       border: 0;
       background: transparent;
       color: #fff;
       text-align: left;
-      padding: 13px 18px;
+      padding: 10px 14px;
       font-family: 'Hind Siliguri', sans-serif;
-      font-size: 16px;
+      font-size: 15px;
+      line-height: 1.35;
       cursor: pointer;
       transition: background 0.15s;
     }
     .category-overlay-item:hover,
     .category-overlay-item:active {
-      background: rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.09);
     }
     .category-overlay-item.active {
       background: rgba(46,160,92,0.28);
@@ -225,7 +232,7 @@
     }
     .category-overlay-empty {
       color: #bbb;
-      padding: 18px;
+      padding: 18px 14px;
       text-align: center;
       font-size: 14px;
     }
@@ -235,20 +242,17 @@
 
     @media (max-width: 600px) {
       .category-panel {
-        top: 0;
-        left: 0;
-        width: 100%;
-        max-height: 100vh;
-        border-radius: 0;
-        padding-bottom: 20px;
+        width: 270px;
+        max-width: calc(100vw - 10px);
+        max-height: 72vh;
       }
       .category-panel-title {
-        font-size: 17px;
-        padding: 13px 16px;
+        font-size: 15px;
+        padding: 9px 13px;
       }
       .category-overlay-item {
-        font-size: 16px;
-        padding: 13px 18px;
+        font-size: 15px;
+        padding: 10px 13px;
       }
     }
 
@@ -995,7 +999,9 @@
 
   function toggleCategoryOverlay(force) {
     const overlay = document.getElementById('categoryOverlay');
-    if (!overlay) return;
+    const panel = document.querySelector('#categoryOverlay .category-panel');
+    const navBtn = document.getElementById('categoryNavBtn');
+    if (!overlay || !panel) return;
 
     const shouldOpen = typeof force === 'boolean'
       ? force
@@ -1005,13 +1011,31 @@
       renderCategoryOverlay();
       overlay.classList.add('open');
       document.body.classList.add('category-menu-open');
-      const nav = document.getElementById('categoryNavBtn');
-      if (nav) nav.classList.add('active');
+
+      // Put the dropdown immediately below the nav bar and align it
+      // with the "বিভাগ" button, like a normal website dropdown menu.
+      const nav = document.querySelector('.nav');
+      const target = navBtn || nav;
+      if (target) {
+        const rect = target.getBoundingClientRect();
+        const navRect = nav ? nav.getBoundingClientRect() : rect;
+        panel.style.top = `${Math.round(navRect.bottom)}px`;
+
+        // On desktop, align with the category button.
+        // On small screens keep it inside the viewport.
+        let left = Math.round(rect.left);
+        const maxLeft = window.innerWidth - panel.offsetWidth - 6;
+        left = Math.max(0, Math.min(left, maxLeft));
+        panel.style.left = `${left}px`;
+      }
+
+      if (navBtn) navBtn.classList.add('active');
     } else {
       overlay.classList.remove('open');
       document.body.classList.remove('category-menu-open');
-      const nav = document.getElementById('categoryNavBtn');
-      if (nav) nav.classList.remove('active');
+      panel.style.top = '';
+      panel.style.left = '';
+      if (navBtn) navBtn.classList.remove('active');
     }
   }
 
@@ -1102,6 +1126,13 @@
     }
     localStorage.setItem('bookmarks', JSON.stringify(saved));
   }
+
+  window.addEventListener('resize', () => {
+    const overlay = document.getElementById('categoryOverlay');
+    if (overlay && overlay.classList.contains('open')) {
+      toggleCategoryOverlay(true);
+    }
+  });
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') toggleCategoryOverlay(false);
