@@ -1071,60 +1071,60 @@
   }
 
   // ===== BEST STORIES NAV =====
-  // Uses the actual admin category slug when available, so clicking
-  // "সেরা গল্প" filters the same category posts instead of relying
-  // on a hardcoded/non-existent slug.
+  // "সেরা গল্প" MUST use the exact same category that is shown
+  // in the category menu as "সেরা বাংলা চটি".
   function filterBestStories() {
     const normalize = value => String(value || '')
       .trim()
       .toLowerCase()
       .replace(/[\s_\-]+/g, '');
 
-    const exactNames = [
-      'সেরা বাংলা গল্প',
-      'সেরা বাংলা চটি',
-      'সেরা বাংলা চটি গল্প',
-      'সেরা গল্প',
-      'জনপ্রিয়',
-      'জনপ্রিয়'
-    ].map(normalize);
+    const findBestCategory = () => {
+      const list = categoryList || [];
 
-    const exactSlugs = [
-      'serabanglagolpo',
-      'serabanglachoti',
-      'serabanglachotigolpo',
-      'seragolpo',
-      'popular',
-      'jonopriyo',
-      'hot'
-    ].map(normalize);
+      // Priority 1: exact category visible in the menu.
+      let found = list.find(c =>
+        normalize(c && c.name) === normalize('সেরা বাংলা চটি')
+      );
 
-    const found = (categoryList || []).find(c => {
-      const name = normalize(c && (c.name || c.title || c.label));
-      const slug = normalize(c && c.slug);
-      return exactNames.includes(name)
-        || exactSlugs.includes(slug)
-        || (name.includes('সেরা বাংলা') && name.includes('চটি'))
-        || (slug.includes('serabangla') && slug.includes('choti'));
-    });
+      // Priority 2: common exact variants.
+      if (!found) {
+        const names = [
+          'সেরা বাংলা চটি গল্প',
+          'সেরা বাংলা গল্প',
+          'সেরা গল্প'
+        ].map(normalize);
 
-    if (found && found.slug) {
-      filterCat(String(found.slug), null, true);
-    } else {
-      // If categories have not finished loading yet, load them once and retry.
-      loadCategories(true).then(() => {
-        const retry = (categoryList || []).find(c => {
-          const name = normalize(c && (c.name || c.title || c.label));
-          const slug = normalize(c && c.slug);
-          return exactNames.includes(name)
-            || exactSlugs.includes(slug)
-            || (name.includes('সেরা বাংলা') && name.includes('চটি'))
-            || (slug.includes('serabangla') && slug.includes('choti'));
-        });
-        if (retry && retry.slug) {
-          filterCat(String(retry.slug), null, true);
-        }
-      }).catch(() => {});
+        found = list.find(c => names.includes(normalize(c && c.name)));
+      }
+
+      // Priority 3: slug fallback.
+      if (!found) {
+        const slugs = [
+          'serabanglachoti',
+          'serabanglachotigolpo',
+          'serabanglagolpo',
+          'seragolpo'
+        ].map(normalize);
+
+        found = list.find(c => slugs.includes(normalize(c && c.slug)));
+      }
+
+      return found;
+    };
+
+    const apply = () => {
+      const found = findBestCategory();
+      if (found && found.slug) {
+        // This is exactly the same filterCat() used by the category menu.
+        filterCat(String(found.slug), null, true);
+        return true;
+      }
+      return false;
+    };
+
+    if (!apply()) {
+      loadCategories(true).then(() => apply()).catch(() => {});
     }
   }
 
