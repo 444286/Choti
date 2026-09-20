@@ -167,14 +167,14 @@
       position: fixed;
       top: 0;
       left: 0;
-      width: 285px;
-      max-width: calc(100vw - 12px);
-      max-height: min(72vh, 620px);
+      width: 255px;
+      max-width: calc(100vw - 10px);
+      max-height: min(68vh, 560px);
       overflow-y: auto;
       background: #303030;
       box-shadow: 0 10px 28px rgba(0,0,0,0.32);
-      border-radius: 0 0 5px 5px;
-      padding: 0 0 8px;
+      border-radius: 0 0 4px 4px;
+      padding: 0 0 5px;
     }
     .category-panel-title {
       color: #fff;
@@ -215,10 +215,10 @@
       background: transparent;
       color: #fff;
       text-align: left;
-      padding: 10px 14px;
+      padding: 9px 12px;
       font-family: 'Hind Siliguri', sans-serif;
-      font-size: 15px;
-      line-height: 1.35;
+      font-size: 14px;
+      line-height: 1.3;
       cursor: pointer;
       transition: background 0.15s;
     }
@@ -242,17 +242,17 @@
 
     @media (max-width: 600px) {
       .category-panel {
-        width: 270px;
+        width: 245px;
         max-width: calc(100vw - 10px);
-        max-height: 72vh;
+        max-height: 68vh;
       }
       .category-panel-title {
         font-size: 15px;
         padding: 9px 13px;
       }
       .category-overlay-item {
-        font-size: 15px;
-        padding: 10px 13px;
+        font-size: 14px;
+        padding: 9px 12px;
       }
     }
 
@@ -1021,10 +1021,20 @@
         const navRect = nav ? nav.getBoundingClientRect() : rect;
         panel.style.top = `${Math.round(navRect.bottom)}px`;
 
-        // On desktop, align with the category button.
-        // On small screens keep it inside the viewport.
+        // Keep the dropdown in the exact nav area:
+        // it starts at the category button's left edge and is only
+        // as wide as the space up to the next nav item.
+        const next = target.nextElementSibling;
+        let width = 245;
+        if (next && next.getBoundingClientRect) {
+          const nextRect = next.getBoundingClientRect();
+          const available = nextRect.left - rect.left;
+          if (available > 150) width = Math.min(245, Math.round(available));
+        }
+        panel.style.width = `${width}px`;
+
         let left = Math.round(rect.left);
-        const maxLeft = window.innerWidth - panel.offsetWidth - 6;
+        const maxLeft = window.innerWidth - width - 6;
         left = Math.max(0, Math.min(left, maxLeft));
         panel.style.left = `${left}px`;
       }
