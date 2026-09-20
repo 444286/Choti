@@ -71,8 +71,31 @@ async function loadStory(){
   const app=document.getElementById('app');
   const parts=window.location.pathname.split('/').filter(Boolean);const pathPart=parts.length?decodeURIComponent(parts[parts.length-1]):'';const params=new URLSearchParams(window.location.search);const querySlug=params.get('slug');const oldId=params.get('id');const isPlaceholder=!pathPart||pathPart==='story'||pathPart==='story.html'||pathPart==='index.html';
   try{
-    let url;if(querySlug)url=`${API}/api/stories/slug/${encodeURIComponent(querySlug)}`;else if(!isPlaceholder)url=`${API}/api/stories/slug/${encodeURIComponent(pathPart)}`;else if(oldId)url=`${API}/api/stories/${encodeURIComponent(oldId)}`;else throw new Error('Missing story identifier');
-    const res=await fetch(url,{headers:{Accept:'application/json'}});if(!res.ok)throw new Error('Story not found');const story=await res.json();
+    let story = null;
+    const requestedSlug = querySlug || (!isPlaceholder ? pathPart : '');
+
+    // Keep the original slug -> story API flow. If that endpoint is unavailable
+    // for an older post, fall back to the existing stories search endpoint.
+    if (requestedSlug) {
+      const slugUrl = `${API}/api/stories/slug/${encodeURIComponent(requestedSlug)}`;
+      const slugRes = await fetch(slugUrl,{headers:{Accept:'application/json'}});
+      if (slugRes.ok) {
+        story = await slugRes.json();
+      } else {
+        const searchUrl = `${API}/api/stories?search=${encodeURIComponent(requestedSlug)}&page=1&limit=100`;
+        const searchRes = await fetch(searchUrl,{headers:{Accept:'application/json'}});
+        if (searchRes.ok) {
+          const data = await searchRes.json();
+          const stories = Array.isArray(data.stories) ? data.stories : [];
+          story = stories.find(item => String(item.slug || '') === String(requestedSlug)) || null;
+        }
+      }
+    } else if (oldId) {
+      const idRes = await fetch(`${API}/api/stories/${encodeURIComponent(oldId)}`,{headers:{Accept:'application/json'}});
+      if (idRes.ok) story = await idRes.json();
+    }
+
+    if (!story) throw new Error('Story not found');
     setStorySEO(story);
     const date=story.createdAt?new Date(story.createdAt).toLocaleDateString('bn-BD'):'';const cats=await getCategories();const cmap=categoryMap(cats);
     const catHtml=(story.categories||[]).map(slug=>{const c=cmap[slug]||{name:slug};const safe=String(slug).replace(/'/g,"\\'");return `<button class="cat" onclick="openCategory('${safe}')">${escapeHTML(c.name||slug)}</button>`}).join('');
