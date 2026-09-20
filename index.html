@@ -687,7 +687,7 @@
     <a href="#" class="nav-link active" onclick="filterCat(''); return false;">🏠 হোম</a>
     <a href="#" id="categoryNavBtn" class="nav-link" onclick="toggleCategoryOverlay(); return false;">বিভাগ <span id="categoryChevron">⌄</span></a>
     <a href="#" class="nav-link" onclick="showSubmitModal(); return false;">গল্প লিখে পাঠান</a>
-    <a href="#" class="nav-link" onclick="filterCat('hot'); return false;">সেরা গল্প</a>
+    <a href="#" class="nav-link" id="bestStoriesNav" onclick="filterBestStories(); return false;">সেরা গল্প</a>
     <a href="#" class="nav-link">যোগাযোগ</a>
     <button class="nav-live">🔥 LIVE CAMS</button>
   </div>
@@ -1068,6 +1068,54 @@
 
     const btn = document.querySelector(`.filter-tag[data-category="${CSS.escape(String(cat))}"]`);
     if (btn) btn.classList.add('active');
+  }
+
+  // ===== BEST STORIES NAV =====
+  // Uses the actual admin category slug when available, so clicking
+  // "সেরা গল্প" filters the same category posts instead of relying
+  // on a hardcoded/non-existent slug.
+  function filterBestStories() {
+    const normalize = value => String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_\-]+/g, '');
+
+    const exactNames = [
+      'সেরা বাংলা গল্প',
+      'সেরা গল্প',
+      'জনপ্রিয়',
+      'জনপ্রিয়'
+    ].map(normalize);
+
+    const exactSlugs = [
+      'serabanglagolpo',
+      'seragolpo',
+      'popular',
+      'jonopriyo',
+      'hot'
+    ].map(normalize);
+
+    const found = (categoryList || []).find(c => {
+      const name = normalize(c && (c.name || c.title || c.label));
+      const slug = normalize(c && c.slug);
+      return exactNames.includes(name) || exactSlugs.includes(slug);
+    });
+
+    if (found && found.slug) {
+      filterCat(String(found.slug), null, true);
+    } else {
+      // If categories have not finished loading yet, load them once and retry.
+      loadCategories(true).then(() => {
+        const retry = (categoryList || []).find(c => {
+          const name = normalize(c && (c.name || c.title || c.label));
+          const slug = normalize(c && c.slug);
+          return exactNames.includes(name) || exactSlugs.includes(slug);
+        });
+        if (retry && retry.slug) {
+          filterCat(String(retry.slug), null, true);
+        }
+      }).catch(() => {});
+    }
   }
 
   function filterCat(cat, btn, addHistory = true) {
