@@ -4,6 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>গল্প | Bangla Choti Kahinii</title>
+<meta name="description" content="বাংলা গল্প পড়ুন Bangla Choti Kahinii-তে। নতুন ও জনপ্রিয় গল্পের সংগ্রহ।">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<link id="canonicalLink" rel="canonical" href="https://banglachoti.pages.dev/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Bangla Choti Kahinii">
+<meta property="og:locale" content="bn_BD">
+<meta id="ogTitle" property="og:title" content="বাংলা গল্প | Bangla Choti Kahinii">
+<meta id="ogDescription" property="og:description" content="বাংলা গল্প পড়ুন Bangla Choti Kahinii-তে।">
+<meta id="ogUrl" property="og:url" content="https://banglachoti.pages.dev/">
+<meta id="ogImage" property="og:image" content="https://banglachoti.pages.dev/">
+<meta name="twitter:card" content="summary_large_image">
+<meta id="twitterTitle" name="twitter:title" content="বাংলা গল্প | Bangla Choti Kahinii">
+<meta id="twitterDescription" name="twitter:description" content="বাংলা গল্প পড়ুন Bangla Choti Kahinii-তে।">
+<meta id="twitterImage" name="twitter:image" content="https://banglachoti.pages.dev/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -18,6 +33,25 @@
 const API='https://choti.onrender.com';
 function goHome(){window.location.href='/';}
 function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+function stripHTML(v){const d=document.createElement('div');d.innerHTML=String(v||'');return (d.textContent||d.innerText||'').replace(/\s+/g,' ').trim();}
+function absUrl(v){try{return new URL(v,window.location.origin).href;}catch(e){return String(v||'');}}
+function setSEO(story){
+  const title=String(story.title||'বাংলা গল্প').trim();
+  const desc=String(story.excerpt||stripHTML(story.content).slice(0,160)||`${title} গল্পটি Bangla Choti Kahinii-তে পড়ুন।`).trim();
+  const canonical=story.slug?`https://banglachoti.pages.dev/${encodeURIComponent(story.slug)}/`:window.location.href.split('?')[0];
+  document.title=`${title} | Bangla Choti Kahinii`;
+  const md=document.querySelector('meta[name="description"]'); if(md) md.content=desc;
+  const c=document.getElementById('canonicalLink'); if(c)c.href=canonical;
+  const props={ogTitle:title,ogDescription:desc,ogUrl:canonical,twitterTitle:title,twitterDescription:desc};
+  if(story.image){props.ogImage=absUrl(story.image);props.twitterImage=absUrl(story.image);}
+  Object.entries(props).forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.setAttribute('content',v);});
+  document.querySelectorAll('script[data-story-schema]').forEach(e=>e.remove());
+  const schema={'@context':'https://schema.org','@type':'Article','headline':title,'description':desc,'url':canonical,'inLanguage':'bn-BD','isAccessibleForFree':true,'mainEntityOfPage':{'@type':'WebPage','@id':canonical},'author':{'@type':'Person','name':story.author||'Bangla Choti Kahinii'},'publisher':{'@type':'Organization','name':'Bangla Choti Kahinii','url':'https://banglachoti.pages.dev/'}};
+  if(story.createdAt)schema.datePublished=new Date(story.createdAt).toISOString();
+  if(story.updatedAt)schema.dateModified=new Date(story.updatedAt).toISOString(); else if(story.createdAt)schema.dateModified=new Date(story.createdAt).toISOString();
+  if(story.image)schema.image=[absUrl(story.image)];
+  const sc=document.createElement('script');sc.type='application/ld+json';sc.setAttribute('data-story-schema','true');sc.textContent=JSON.stringify(schema);document.head.appendChild(sc);
+}
 async function getCategories(){try{const r=await fetch(`${API}/api/categories`);return r.ok?await r.json():[]}catch(e){return[];}}
 async function getStoryLinks(id){try{const r=await fetch(`${API}/api/stories/related/${encodeURIComponent(id)}`);return r.ok?await r.json():{series:{parts:[]},related:[]};}catch(e){return{series:{parts:[]},related:[]};}}
 function categoryMap(list){const m={};(list||[]).forEach(c=>m[c.slug]=c);return m;}
@@ -33,20 +67,22 @@ async function loadStory(){
   const oldId=params.get('id');
   const isPlaceholder=!pathPart||pathPart==='story'||pathPart==='story.html'||pathPart==='index.html';
   try{
-    let url;
-    if(querySlug){url=`${API}/api/stories/slug/${encodeURIComponent(querySlug)}`;}
-    else if(!isPlaceholder){url=`${API}/api/stories/slug/${encodeURIComponent(pathPart)}`;}
-    else if(oldId){url=`${API}/api/stories/${encodeURIComponent(oldId)}`;}
-    else{throw new Error('Missing story identifier');}
-    const res=await fetch(url,{headers:{'Accept':'application/json'}});
-    if(!res.ok)throw new Error('Story not found');
-    const story=await res.json();
-    document.title=`${story.title||'গল্প'} | Bangla Choti Kahinii`;
+    let story = window.__SERVER_STORY__ || null;
+    if(!story){
+      let url;
+      if(querySlug){url=`${API}/api/stories/slug/${encodeURIComponent(querySlug)}`;}
+      else if(!isPlaceholder){url=`${API}/api/stories/slug/${encodeURIComponent(pathPart)}`;}
+      else if(oldId){url=`${API}/api/stories/${encodeURIComponent(oldId)}`;}
+      else{throw new Error('Missing story identifier');}
+      const res=await fetch(url,{headers:{'Accept':'application/json'},cache:'no-store'});
+      if(!res.ok)throw new Error('Story not found');
+      story=await res.json();
+    }
+    setSEO(story);
     const date=story.createdAt?new Date(story.createdAt).toLocaleDateString('bn-BD'):'';
     const cats=await getCategories();
     const cmap=categoryMap(cats);
-    const categoryValues=(Array.isArray(story.categories)&&story.categories.length)?story.categories:(Array.isArray(story.tags)?story.tags:[]);
-    const catHtml=categoryValues.map(slug=>{
+    const catHtml=(story.categories||[]).map(slug=>{
       const c=cmap[slug]||{name:slug};
       const safeSlug=String(slug).replace(/'/g,"\\'");
       return `<button class="cat" onclick="openCategory('${safeSlug}')">${escapeHTML(c.name||slug)}</button>`;
@@ -66,18 +102,20 @@ async function loadStory(){
       linksHtml += `<section class="series-box"><div class="series-title">এই গল্পের অন্যান্য পর্ব</div><ol class="series-list">${optionItems}</ol></section>`;
     }
     if (relatedList.length && partsList.length < 4) {
-      linksHtml += `<section class="series-box"><div class="series-title related-title">এই বিভাগের আরও গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
+      linksHtml += `<section class="series-box"><div class="series-title related-title">আরও অন্যান্য গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
     }
     if (!partsList.length && relatedList.length) {
-      linksHtml = `<section class="series-box"><div class="series-title">এই বিভাগের আরও গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
+      linksHtml = `<section class="series-box"><div class="series-title">আরও অন্যান্য গল্প</div><ol class="series-list">${relatedItems}</ol></section>`;
     }
 
     const categoryHtml = catHtml
-      ? `<section class="category-end"><div class="category-title">এই গল্পের বিভাগ</div><div class="category-list">${catHtml}</div></section>`
+      ? `<section class="category-end"><div class="category-title">ক্যাটাগরি</div><div class="category-list">${catHtml}</div></section>`
       : '';
 
     app.className='article';
     app.innerHTML=`<div class="head"><h1 class="title">${escapeHTML(story.title||'গল্প')}</h1><div class="meta"><span>👤 ${escapeHTML(story.author||'অজ্ঞাত')}</span>${date?`<span>📅 ${date}</span>`:''}<span>👁 ${(Number(story.views)||0).toLocaleString('bn-BD')}</span></div></div>${story.image?`<img class="cover" src="${escapeHTML(story.image)}" alt="${escapeHTML(story.title||'গল্প')}" loading="lazy">`:''}<article class="content">${story.content||''}</article>${categoryHtml}${linksHtml}`;
+    // Exact heading labels requested by the site owner.
+    app.querySelectorAll('*').forEach(el=>{ if(el.children.length===0){ if(el.textContent.trim()==='এই গল্পের বিভাগ') el.textContent='ক্যাটাগরি'; if(el.textContent.trim()==='এই বিভাগের আরও গল্প') el.textContent='আরও অন্যান্য গল্প'; }});
   }catch(e){console.error(e);showError();}
 }
 loadStory();
