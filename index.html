@@ -167,7 +167,7 @@
       position: fixed;
       top: 0;
       left: 0;
-      width: 255px;
+      width: 320px;
       max-width: calc(100vw - 10px);
       max-height: min(68vh, 560px);
       overflow-y: auto;
@@ -242,7 +242,7 @@
 
     @media (max-width: 600px) {
       .category-panel {
-        width: 245px;
+        width: 320px;
         max-width: calc(100vw - 10px);
         max-height: 68vh;
       }
@@ -1021,20 +1021,12 @@
         const navRect = nav ? nav.getBoundingClientRect() : rect;
         panel.style.top = `${Math.round(navRect.bottom)}px`;
 
-        // Keep the dropdown in the exact nav area:
-        // it starts at the category button's left edge and is only
-        // as wide as the space up to the next nav item.
-        const next = target.nextElementSibling;
-        let width = 245;
-        if (next && next.getBoundingClientRect) {
-          const nextRect = next.getBoundingClientRect();
-          const available = nextRect.left - rect.left;
-          if (available > 150) width = Math.min(245, Math.round(available));
-        }
-        panel.style.width = `${width}px`;
+        // Fixed compact width; do not expand into the next nav item.
+        panel.style.width = '';
 
         let left = Math.round(rect.left);
-        const maxLeft = window.innerWidth - width - 6;
+        const panelWidth = panel.getBoundingClientRect().width;
+        const maxLeft = window.innerWidth - panelWidth - 6;
         left = Math.max(0, Math.min(left, maxLeft));
         panel.style.left = `${left}px`;
       }
