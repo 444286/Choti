@@ -3,20 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bangla Choti Kahinii - বাংলা গল্প | নতুন ও জনপ্রিয় গল্প</title>
-  <meta name="description" content="Bangla Choti Kahinii-তে নতুন, জনপ্রিয় ও বিভিন্ন ক্যাটাগরির বাংলা গল্প পড়ুন।" />
-  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
-  <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
-  <link rel="canonical" href="https://banglachoti.pages.dev/" />
-  <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Bangla Choti Kahinii" />
-  <meta property="og:title" content="Bangla Choti Kahinii - বাংলা গল্প" />
-  <meta property="og:description" content="নতুন, জনপ্রিয় ও বিভিন্ন ক্যাটাগরির বাংলা গল্প পড়ুন।" />
-  <meta property="og:url" content="https://banglachoti.pages.dev/" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Bangla Choti Kahinii - বাংলা গল্প" />
-  <meta name="twitter:description" content="নতুন, জনপ্রিয় ও বিভিন্ন ক্যাটাগরির বাংলা গল্প পড়ুন।" />
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Bangla Choti Kahinii","url":"https://banglachoti.pages.dev/","inLanguage":"bn-BD","potentialAction":{"@type":"SearchAction","target":"https://banglachoti.pages.dev/?search={search_term_string}","query-input":"required name=search_term_string"}}</script>
+  <title>Bangla Choti Kahinii - বাংলা গল্পের সবচেয়ে বড় ঠিকানা</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -593,7 +580,7 @@
 <nav class="nav">
   <div class="nav-inner">
     <a href="#" class="nav-link active" onclick="filterCat(''); return false;">🏠 হোম</a>
-    <a href="#" class="nav-link" onclick="filterCat('popular'); return false;">বিভাগ ▾</a>
+    <a href="#filterTags" class="nav-link" onclick="document.getElementById('filterTags').scrollIntoView({behavior:'smooth', block:'center'}); return false;">বিভাগ ▾</a>
     <a href="#" class="nav-link" onclick="showSubmitModal(); return false;">গল্প লিখে পাঠান</a>
     <a href="#" class="nav-link" onclick="filterCat('hot'); return false;">সেরা গল্প</a>
     <a href="#" class="nav-link">যোগাযোগ</a>
@@ -611,13 +598,7 @@
     <button onclick="doSearch()">খুঁজুন</button>
   </div>
   <div class="filter-tags" id="filterTags">
-    <button class="filter-tag active" onclick="filterCat('', this)">🔥 জনপ্রিয়</button>
-    <button class="filter-tag" onclick="filterCat('new', this)">💚 নতুন গল্প</button>
-    <button class="filter-tag" onclick="filterCat('real', this)">📖 বাস্তব ঘটনা</button>
-    <button class="filter-tag" onclick="filterCat('porkiya', this)">📚 পরকীয়া</button>
-    <button class="filter-tag" onclick="filterCat('grihobodhu', this)">👥 গৃহবধু</button>
-    <button class="filter-tag" onclick="filterCat('teacher-student', this)">☕ শিক্ষক-ছাত্রী</button>
-    <button class="filter-tag">... আরও</button>
+    <button class="filter-tag active" onclick="filterCat('', this)">📚 সব গল্প</button>
   </div>
 </div>
 
@@ -700,21 +681,54 @@
     return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
   }
 
-  async function loadCategories() {
-    if (categoryList.length) return;
+  async function loadCategories(force = false) {
+    if (categoryList.length && !force) return categoryList;
+
     try {
-      const res = await fetch(`${API}/api/categories`);
-      if (!res.ok) return;
-      categoryList = await res.json();
+      const res = await fetch(`${API}/api/categories?ts=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      if (!res.ok) throw new Error('Category load failed');
+
+      const data = await res.json();
+      categoryList = Array.isArray(data) ? data : [];
       categoryMap = {};
-      categoryList.forEach(c => { categoryMap[c.slug] = c; });
-      const top = document.getElementById('filterTags');
-      if (top && categoryList.length) {
-        top.innerHTML = categoryList.map(c =>
-          `<button class="filter-tag" onclick="filterCat('${String(c.slug).replace(/'/g, "\\'")}', this)">${escapeHtml(c.name)}</button>`
-        ).join('');
-      }
-    } catch (e) {}
+      categoryList.forEach(c => {
+        if (c && c.slug) categoryMap[String(c.slug)] = c;
+      });
+
+      renderCategoryMenu();
+      return categoryList;
+    } catch (e) {
+      console.error('Category load error:', e);
+      return categoryList;
+    }
+  }
+
+  function renderCategoryMenu() {
+    const top = document.getElementById('filterTags');
+    if (!top) return;
+
+    const buttons = [
+      `<button class="filter-tag${!currentCat ? ' active' : ''}" onclick="filterCat('', this)">📚 সব গল্প</button>`
+    ];
+
+    categoryList.forEach(c => {
+      if (!c || !c.slug) return;
+
+      const slug = String(c.slug);
+      const name = escapeHtml(c.name || slug);
+      const icon = escapeHtml(c.icon || '📖');
+      const safeSlug = slug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+      buttons.push(
+        `<button class="filter-tag${currentCat === slug ? ' active' : ''}" ` +
+        `data-category="${escapeHtml(slug)}" ` +
+        `onclick="filterCat('${safeSlug}', this)">${icon} ${name}</button>`
+      );
+    });
+
+    top.innerHTML = buttons.join('');
   }
 
   // ===== RENDER STORIES =====
@@ -736,7 +750,8 @@
         : `<div class="no-img">📖</div>`;
       const cats = (s.categories || []).map(c => {
         const info = categoryMap[c] || { name: c };
-        return `<button type="button" class="story-cat" onclick="event.stopPropagation(); filterCat('${String(c).replace(/'/g, "\\'")}', this)">${escapeHtml(info.name || c)}</button>`;
+        const icon = info.icon ? `${escapeHtml(info.icon)} ` : '';
+        return `<button type="button" class="story-cat" onclick="event.stopPropagation(); filterCat('${String(c).replace(/'/g, "\\'")}', this)">${icon}${escapeHtml(info.name || c)}</button>`;
       }).join('');
 
       return `
@@ -834,18 +849,17 @@
     if (e.target === this) closeModal();
   });
 
-  // ===== FILTER BY CATEGORYs =====
+  // ===== FILTER BY CATEGORY =====
   function setActiveCategoryButton(cat) {
     document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+
     if (!cat) {
-      const homeBtn = document.querySelector('.filter-tag');
-      if (homeBtn) homeBtn.classList.add('active');
+      const allBtn = document.querySelector('.filter-tag[data-category=""]') || document.querySelector('.filter-tag');
+      if (allBtn) allBtn.classList.add('active');
       return;
     }
-    const btn = Array.from(document.querySelectorAll('.filter-tag')).find(t => {
-      const m = t.getAttribute('onclick') || '';
-      return m.includes(`filterCat('${cat}'`);
-    });
+
+    const btn = document.querySelector(`.filter-tag[data-category="${CSS.escape(String(cat))}"]`);
     if (btn) btn.classList.add('active');
   }
 
