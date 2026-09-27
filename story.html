@@ -48,7 +48,7 @@ body.dark{--bg-body:#0d1f14;--text-dark:#e8f5ee;--text-gray:#9dbdaa;--border:#1e
 <main class="wrap"><div id="app" class="loading">গল্প লোড হচ্ছে...</div></main>
 <footer class="foot">🌿 গল্প পড়ুন, কল্পনার জগতে হারিয়ে যান...</footer>
 <script>
-const API='https://choti.onrender.com';
+const API='https://choti-backend.onrender.com';
 function goHomeSearch(){window.location.href='/?search=';}
 let categoryList=[];
 async function loadHeaderCategories(){try{const r=await fetch(`${API}/api/categories?ts=${Date.now()}`,{cache:'no-store'});categoryList=r.ok?await r.json():[];}catch(e){categoryList=[];}renderHeaderCategories();}
