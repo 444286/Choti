@@ -15,7 +15,7 @@
 <main class="wrap"><div id="app" class="loading">গল্প লোড হচ্ছে...</div></main>
 <footer class="foot">🌿 গল্প পড়ুন, কল্পনার জগতে হারিয়ে যান...</footer>
 <script>
-const API='https://choti.onrender.com';
+const API='https://choti-backend.onrender.com';
 function goHome(){window.location.href='/';}
 function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
 async function getCategories(){try{const r=await fetch(`${API}/api/categories`);return r.ok?await r.json():[]}catch(e){return[];}}
