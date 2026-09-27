@@ -1,4 +1,4 @@
-const API = 'https://choti.onrender.com';
+const API = 'https://choti-backend.onrender.com';
 const SITE = 'https://banglachoti.pages.dev';
 
 export async function onRequestGet() {
