@@ -113,13 +113,11 @@ function storyLink(item){
 function showError(){const app=document.getElementById('app');app.className='error';app.innerHTML='<div class="error-icon">⚠️</div><div class="error-text">গল্পটি পাওয়া যায়নি।</div><a class="home" href="/">← হোমে ফিরে যান</a>';}
 async function loadStory(){
   const app=document.getElementById('app');
-  const parts=window.location.pathname.split('/').filter(Boolean);
-  const pathPart=parts.length?decodeURIComponent(parts[parts.length-1]):'';
-  const params=new URLSearchParams(window.location.search);
-  const querySlug=params.get('slug');
-  const oldId=params.get('id');
-  const isPlaceholder=!pathPart||pathPart==='story'||pathPart==='story.html'||pathPart==='index.html';
-  /* cleanLink: extract the slug portion from a postLink value (full URL or plain slug) */
+  /* Read slug ONLY from pathname — e.g. /amar-golpo → "amar-golpo" */
+  const pathParts=window.location.pathname.split('/').filter(Boolean);
+  const pathSlug=pathParts.length?decodeURIComponent(pathParts[pathParts.length-1]):'';
+  const oldId=new URLSearchParams(window.location.search).get('id');
+  /* cleanLink: strip domain/slashes from a postLink value */
   const cleanLink=v=>{
     let s=String(v||'').trim();
     if(!s)return '';
@@ -130,7 +128,7 @@ async function loadStory(){
   try{
     let story = window.__SERVER_STORY__ || null;
     if(!story){
-      const wantedRaw=querySlug||(!isPlaceholder?pathPart:'');
+      const wantedRaw=pathSlug;
       if(!wantedRaw&&!oldId){throw new Error('No slug');}
       if(oldId){
         /* Legacy: lookup by Firebase push-key */
