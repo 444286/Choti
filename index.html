@@ -1004,8 +1004,9 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
     return String(value||'').toLowerCase().normalize('NFKD').split('').map(ch=>map[ch] ?? ch).join('').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').replace(/-+/g,'-') || 'story';
   }
   function storyUrl(story) {
-    let slug = String(story.postLink || story.urlSlug || story.slug || '').trim();
+    let slug = String(story.postLink || story.customLink || story.manualLink || story.postUrl || story.permalink || story.urlSlug || story.slug || '').trim();
     if (/^https?:\/\//i.test(slug)) { try { slug = new URL(slug).pathname.split('/').filter(Boolean).pop() || ''; } catch(e) {} }
+    try { slug = decodeURIComponent(slug); } catch(e) {}
     slug = slug.replace(/^\/+|\/+$/g, '');
     if (!slug || slug.includes('/')) slug = romanizeBanglaSlug(story.title || 'story');
     return `/${encodeURIComponent(slug)}`;
