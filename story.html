@@ -77,7 +77,10 @@ function absUrl(v){try{return new URL(v,window.location.origin).href;}catch(e){r
 function setSEO(story){
   const title=String(story.title||'বাংলা গল্প').trim();
   const desc=String(story.excerpt||stripHTML(story.content).slice(0,160)||`${title} গল্পটি Bangla Choti Kahinii-তে পড়ুন।`).trim();
-  const canonical=`https://banglachoti.pages.dev/${encodeURIComponent(romanizeBanglaSlug(story.title||story.slug))}`;
+  let canonicalSlug=String(story.postLink||story.urlSlug||story.slug||'').trim();
+  if(/^https?:\/\//i.test(canonicalSlug)){try{canonicalSlug=new URL(canonicalSlug).pathname.split('/').filter(Boolean).pop()||'';}catch(e){}}
+  canonicalSlug=canonicalSlug.replace(/^\/+|\/+$/g,'')||romanizeBanglaSlug(story.title||story.slug);
+  const canonical=`https://banglachoti.pages.dev/${encodeURIComponent(canonicalSlug)}`;
   document.title=`${title} | Bangla Choti Kahinii`;
   const md=document.querySelector('meta[name="description"]'); if(md) md.content=desc;
   const c=document.getElementById('canonicalLink'); if(c)c.href=canonical;
@@ -111,7 +114,7 @@ async function loadStory(){
     if(!story){
       let wantedSlug=querySlug||(!isPlaceholder?pathPart:'');
       if(oldId){const snap=await db.ref(`stories/${oldId}`).once('value');if(snap.exists())story={...snap.val(),_id:oldId};}
-      else if(wantedSlug){const snap=await db.ref('stories').once('value');const all=snap.val()||{};for(const [id,item] of Object.entries(all)){if(item.slug===wantedSlug||romanizeBanglaSlug(item.title||item.slug)===wantedSlug){story={...item,_id:item._id||id};break;}}}
+      else if(wantedSlug){const snap=await db.ref('stories').once('value');const all=snap.val()||{};const norm=v=>{let x=String(v||'').trim();if(/^https?:\/\//i.test(x)){try{x=new URL(x).pathname;}catch(e){}}return x.split('/').filter(Boolean).pop()||'';};for(const [id,item] of Object.entries(all)){const candidates=[norm(item.postLink),norm(item.urlSlug),norm(item.slug),romanizeBanglaSlug(item.title||item.slug)];if(candidates.includes(decodeURIComponent(wantedSlug))){story={...item,_id:item._id||id};break;}}}
       if(!story||story.status==='draft')throw new Error('Story not found');
     }
     setSEO(story);
@@ -159,4 +162,4 @@ loadHeaderCategories();
 loadStory();
 </script>
 </body>
-</html>
+  </html>
