@@ -77,7 +77,8 @@ function absUrl(v){try{return new URL(v,window.location.origin).href;}catch(e){r
 function setSEO(story){
   const title=String(story.title||'বাংলা গল্প').trim();
   const desc=String(story.excerpt||stripHTML(story.content).slice(0,160)||`${title} গল্পটি Bangla Choti Kahinii-তে পড়ুন।`).trim();
-  const canonical=story.slug?`https://banglachoti.pages.dev/${encodeURIComponent(story.slug)}/`:window.location.href.split('?')[0];
+  const category=Array.isArray(story.categories)&&story.categories.length?story.categories[0]:'bangla-story';
+  const canonical=`https://banglachoti.pages.dev/${encodeURIComponent(category)}/${encodeURIComponent(romanizeBanglaSlug(story.title||story.slug))}/`;
   document.title=`${title} | Bangla Choti Kahinii`;
   const md=document.querySelector('meta[name="description"]'); if(md) md.content=desc;
   const c=document.getElementById('canonicalLink'); if(c)c.href=canonical;
@@ -95,7 +96,8 @@ async function getCategories(){try{const s=await db.ref('categories').once('valu
 async function getStoryLinks(id){try{const s=await db.ref(`stories/${id}/links`).once('value');const v=s.val()||{};return {series:v.series||{parts:[]},related:v.related||[]};}catch(e){return{series:{parts:[]},related:[]};}}
 function categoryMap(list){const m={};(list||[]).forEach(c=>m[c.slug]=c);return m;}
 function openCategory(slug){if(!slug)return;window.location.href=`/?category=${encodeURIComponent(slug)}`;}
-function storyLink(item){if(item.slug)return `/${encodeURIComponent(item.slug)}/`;return `/story.html?id=${encodeURIComponent(item._id)}`;}
+function romanizeBanglaSlug(value){const map={'অ':'o','আ':'a','ই':'i','ঈ':'i','উ':'u','ঊ':'u','ঋ':'ri','এ':'e','ঐ':'oi','ও':'o','ঔ':'ou','া':'a','ি':'i','ী':'i','ু':'u','ূ':'u','ৃ':'ri','ে':'e','ৈ':'oi','ো':'o','ৌ':'ou','ং':'ng','ঃ':'h','ঁ':'n','ক':'k','খ':'kh','গ':'g','ঘ':'gh','ঙ':'ng','চ':'ch','ছ':'chh','জ':'j','ঝ':'jh','ঞ':'n','ট':'t','ঠ':'th','ড':'d','ঢ':'dh','ণ':'n','ত':'t','থ':'th','দ':'d','ধ':'dh','ন':'n','প':'p','ফ':'ph','ব':'b','ভ':'bh','ম':'m','য':'j','য়':'y','র':'r','ল':'l','শ':'sh','ষ':'sh','স':'s','হ':'h','ড়':'r','ঢ়':'rh','ৎ':'t','্':'','়':'','ৱ':'w'};return String(value||'').toLowerCase().normalize('NFKD').split('').map(ch=>map[ch]??ch).join('').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').replace(/-+/g,'-')||'story';}
+function storyLink(item){const cat=Array.isArray(item.categories)&&item.categories.length?item.categories[0]:'bangla-story';return `/${encodeURIComponent(cat)}/${encodeURIComponent(romanizeBanglaSlug(item.title||item.slug))}/`;}
 function showError(){const app=document.getElementById('app');app.className='error';app.innerHTML='<div class="error-icon">⚠️</div><div class="error-text">গল্পটি পাওয়া যায়নি।</div><a class="home" href="/">← হোমে ফিরে যান</a>';}
 async function loadStory(){
   const app=document.getElementById('app');
@@ -110,7 +112,7 @@ async function loadStory(){
     if(!story){
       let wantedSlug=querySlug||(!isPlaceholder?pathPart:'');
       if(oldId){const snap=await db.ref(`stories/${oldId}`).once('value');if(snap.exists())story={...snap.val(),_id:oldId};}
-      else if(wantedSlug){const snap=await db.ref('stories').once('value');const all=snap.val()||{};for(const [id,item] of Object.entries(all)){if(item.slug===wantedSlug){story={...item,_id:item._id||id};break;}}}
+      else if(wantedSlug){const snap=await db.ref('stories').once('value');const all=snap.val()||{};for(const [id,item] of Object.entries(all)){if(item.slug===wantedSlug||romanizeBanglaSlug(item.title||item.slug)===wantedSlug){story={...item,_id:item._id||id};break;}}}
       if(!story||story.status==='draft')throw new Error('Story not found');
     }
     setSEO(story);
@@ -158,4 +160,4 @@ loadHeaderCategories();
 loadStory();
 </script>
 </body>
-  </html>
+</html>
