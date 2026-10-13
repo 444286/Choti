@@ -1004,17 +1004,15 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
     return String(value||'').toLowerCase().normalize('NFKD').split('').map(ch=>map[ch] ?? ch).join('').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').replace(/-+/g,'-') || 'story';
   }
   function storyUrl(story) {
-    // Use ONLY the admin-set postLink — no auto slug generation
     let link = String(story.postLink || story.customLink || story.manualLink || '').trim();
-    if (!link) return null; // no manual link set → do nothing
-    // If full URL given, extract just the last path segment
+    if (!link) return null;
     if (/^https?:\/\//i.test(link)) {
       try { link = new URL(link).pathname; } catch(e) {}
     }
-    // Decode and clean leading/trailing slashes
     try { link = decodeURIComponent(link); } catch(e) {}
     link = link.replace(/^\/+|\/+$/g, '');
-    if (!link) return null;
+    // Block reserved/invalid paths that would cause redirect loops
+    if (!link || link === 'story' || link === 'story.html' || link === 'index.html' || link === 'admin') return null;
     return '/' + link.split('/').map(encodeURIComponent).join('/');
   }
   async function openStory(id) {
