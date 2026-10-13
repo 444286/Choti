@@ -843,21 +843,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
-// Firebase Console > Project settings > General > Your apps থেকে values বসান.
-window.FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDrh0lGli15t7zj8WnWrhjb4hs-mKPmFlU",
-  authDomain: "jobs-33e35.firebaseapp.com",
-  databaseURL: "https://jobs-33e35-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "jobs-33e35",
-  storageBucket: "jobs-33e35.firebasestorage.app",
-  messagingSenderId: "1058905507108",
-  appId: "1:1058905507108:web:f529c961c7e5fcbb379fb1"
-};
-</script>
-<script>
-  const firebaseConfigured = window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey !== 'PASTE_API_KEY_HERE' && window.FIREBASE_CONFIG.projectId !== 'YOUR_PROJECT_ID';
-  const fbApp = firebaseConfigured ? (firebase.apps.length ? firebase.app() : firebase.initializeApp(window.FIREBASE_CONFIG)) : null;
-  const db = firebaseConfigured ? firebase.database() : null;
+const firebaseConfig = {apiKey:"AIzaSyDrh0lGli15t7zj8WnWrhjb4hs-mKPmFlU",authDomain:"jobs-33e35.firebaseapp.com",databaseURL:"https://jobs-33e35-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"jobs-33e35",storageBucket:"jobs-33e35.firebasestorage.app",messagingSenderId:"1058905507108",appId:"1:1058905507108:web:f529c961c7e5fcbb379fb1"};
+firebase.initializeApp(firebaseConfig); const db=firebase.database();
+
   let currentPage = 1;
   let currentCat = '';
   let currentSearch = '';
@@ -876,19 +864,18 @@ window.FIREBASE_CONFIG = {
       if (search) url.searchParams.set('search', search); else url.searchParams.delete('search');
       history.pushState({category:cat,page,search}, '', url.pathname + url.search);
     }
-    const section = document.getElementById('storiesSection');
-    section.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><div>গল্প লোড হচ্ছে...</div></div>';
+    const section=document.getElementById('storiesSection');
+    section.innerHTML='<div class="loading-spinner"><div class="spinner"></div><div>গল্প লোড হচ্ছে...</div></div>';
     try {
-      await loadCategories();
-      const snap = await db.ref('stories').once('value');
-      let stories = [];
-      snap.forEach(ch => { const v=ch.val()||{}; if(v.status==='published') stories.push({...v,_id:ch.key}); });
-      stories.sort((a,b)=>(Number(b.createdAt)||0)-(Number(a.createdAt)||0));
-      if(cat) stories=stories.filter(x=>(x.categories||[]).includes(cat));
-      if(search) { const q=search.toLocaleLowerCase(); stories=stories.filter(x=>`${x.title||''} ${x.author||''} ${x.content||''}`.toLocaleLowerCase().includes(q)); }
-      const total=stories.length; totalPages=Math.max(1,Math.ceil(total/15));
-      const startAt=(page-1)*15; renderStories(stories.slice(startAt,startAt+15)); renderPagination(page,totalPages,total);
-    } catch(err) { console.error(err); section.innerHTML='<div class="loading-spinner">⚠️ Firebase থেকে গল্প লোড করা যায়নি। firebase-config.js ও Database Rules পরীক্ষা করুন।</div>'; }
+      await loadCategories(true);
+      const snap=await db.ref('stories').once('value');
+      let all=Object.entries(snap.val()||{}).map(([id,s])=>({...s,_id:s._id||id})).filter(s=>s.status==='published');
+      if(cat) all=all.filter(s=>(s.categories||[]).includes(cat));
+      if(search){const q=search.toLowerCase();all=all.filter(s=>String(s.title||'').toLowerCase().includes(q)||String(s.content||'').toLowerCase().includes(q)||String(s.author||'').toLowerCase().includes(q));}
+      all.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+      const total=all.length; totalPages=Math.max(1,Math.ceil(total/15));
+      renderStories(all.slice((page-1)*15,page*15)); renderPagination(page,totalPages,total);
+    } catch(err){console.error(err);section.innerHTML='<div class="loading-spinner">⚠️ Firebase থেকে গল্প লোড করা যায়নি। Database Rules পরীক্ষা করুন।</div>';}
   }
 
   function escapeHtml(v) {
@@ -896,12 +883,14 @@ window.FIREBASE_CONFIG = {
   }
 
   async function loadCategories(force = false) {
-    if (categoryList.length && !force) return categoryList;
-    try {
-      const snap=await db.ref('categories').once('value'); categoryList=[]; categoryMap={};
-      snap.forEach(ch=>{const c={...ch.val(),_id:ch.key}; if(c.slug){categoryList.push(c);categoryMap[String(c.slug)]=c;}});
-      categoryList.sort((a,b)=>(a.name||'').localeCompare(b.name||'')); renderCategoryMenu(); renderCategoryOverlay(); return categoryList;
-    } catch(e){ console.error('Category load error:',e); return categoryList; }
+    if(categoryList.length&&!force)return categoryList;
+    try{
+      const snap=await db.ref('categories').once('value');
+      const raw=snap.val()||{};
+      categoryList=Object.entries(raw).map(([id,c])=>({...c,_id:c._id||id}));
+      categoryMap={}; categoryList.forEach(c=>{if(c&&c.slug)categoryMap[String(c.slug)]=c;});
+      renderCategoryMenu(); renderCategoryOverlay(); return categoryList;
+    }catch(e){console.error('Category load error',e);return categoryList;}
   }
 
   function renderCategoryMenu() {
@@ -1011,46 +1000,34 @@ window.FIREBASE_CONFIG = {
   }
 
   async function openStory(slug, id) {
-    const modal = document.getElementById('storyModal');
-    const titleEl = document.getElementById('modalTitle');
-    const metaEl = document.getElementById('modalMeta');
-    const contentEl = document.getElementById('modalContent');
-    const imgEl = document.getElementById('modalImg');
-    modal.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    titleEl.textContent = 'গল্প লোড হচ্ছে…';
-    metaEl.textContent = '';
-    contentEl.textContent = 'অনুগ্রহ করে অপেক্ষা করুন…';
-    imgEl.style.display = 'none';
-    try {
-      let story = null;
-      if (id) {
-        const snap = await db.ref('stories/' + id).once('value');
-        if (snap.exists()) story = {...snap.val(), _id: snap.key};
-      } else if (slug) {
-        const snap = await db.ref('stories').once('value');
-        snap.forEach(ch => { const v=ch.val()||{}; if(v.slug===slug) story={...v,_id:ch.key}; });
-      }
-      if (!story || story.status !== 'published') throw new Error('গল্প পাওয়া যায়নি');
-      titleEl.textContent = story.title || 'গল্প';
-      const date = story.createdAt ? new Date(Number(story.createdAt)).toLocaleDateString('bn-BD') : '';
-      metaEl.textContent = `👤 ${story.author || 'অজ্ঞাত'}${date ? '  •  📅 '+date : ''}  •  👁 ${Number(story.views)||0}`;
-      contentEl.innerHTML = escapeHtml(story.content || '').replace(/\n/g, '<br>');
-      db.ref('stories/' + story._id + '/views').transaction(v => (Number(v)||0)+1);
-      history.pushState({storyId:story._id}, '', '?id=' + encodeURIComponent(story._id));
-    } catch (err) {
-      titleEl.textContent = 'গল্প পাওয়া যায়নি';
-      contentEl.textContent = err.message || 'Firebase থেকে গল্প লোড করা যায়নি।';
+    // Never send users to /story. If the API already gives a slug, use it.
+    if (slug && slug !== 'story' && slug !== 'story.html') {
+      window.location.href = `/story.html?slug=${encodeURIComponent(slug)}`;
+      return;
+    }
+
+    // Old posts may not have a slug. Fetch the post once by ID, then use its
+    // server-generated slug. If unavailable, open by ID as a safe fallback.
+    if (id) {
+      try {
+        const snap = await db.ref(`stories/${id}`).once('value');
+        if (snap.exists()) {
+          const story = snap.val();
+          const serverSlug = story.slug;
+          if (serverSlug && serverSlug !== 'story' && serverSlug !== 'story.html') {
+            window.location.href = `/${encodeURIComponent(serverSlug)}/`;
+            return;
+          }
+        }
+      } catch (e) {}
+
+      window.location.href = `/story.html?id=${encodeURIComponent(id)}`;
     }
   }
 
   function closeModal() {
     document.getElementById('storyModal').classList.remove('open');
     document.body.style.overflow = '';
-    const url = new URL(window.location.href);
-    if (url.searchParams.has('id') && !url.searchParams.has('category') && !url.searchParams.has('search') && !url.searchParams.has('page')) {
-      history.pushState({}, '', url.pathname);
-    }
   }
 
   // Close modal on overlay click
@@ -1302,13 +1279,7 @@ window.FIREBASE_CONFIG = {
   const initialSearchInput = document.getElementById('searchInput');
   if (initialSearchInput) initialSearchInput.value = initialSearch;
   setActiveCategoryButton(initialCategory);
-  if (!firebaseConfigured) {
-    document.getElementById('storiesSection').innerHTML = '<div class="loading-spinner">⚙️ index.html-এর মধ্যে FIREBASE_CONFIG বসিয়ে দিন।</div>';
-  } else {
-    loadCategories().finally(() => loadStories(initialPage, initialCategory, initialSearch));
-    if (initialParams.get('id')) setTimeout(() => openStory('', initialParams.get('id')), 250);
-    else if (initialParams.get('slug')) setTimeout(() => openStory(initialParams.get('slug'), ''), 250);
-  }
+  loadCategories().finally(() => loadStories(initialPage, initialCategory, initialSearch));
 </script>
 </body>
-  </html>
+</html>
