@@ -941,7 +941,7 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
       }).join('');
 
       return `
-        <div class="story-card" data-story-id="${s._id || ''}" data-story-slug="${s.slug || ''}" data-post-link="${s.postLink || s.customLink || s.manualLink || s.urlSlug || s.slug || ''}" onclick="openStory(this.dataset.postLink||this.dataset.storySlug, this.dataset.storyId)">
+        <div class="story-card" data-story-id="${s._id || ''}" onclick="openStory(this.dataset.storyId)">
           <div class="story-thumb">
             ${imgHtml}
             ${badge}
@@ -1017,21 +1017,19 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
     if (!link) return null;
     return '/' + link.split('/').map(encodeURIComponent).join('/');
   }
-  async function openStory(slug, id) {
-    // Fetch story by Firebase ID and navigate to its admin-set postLink
+  async function openStory(id) {
+    // Navigate using ONLY admin-set postLink from Firebase
+    if (!id) return;
     try {
-      if (id) {
-        const snap = await db.ref(`stories/${id}`).once('value');
-        if (snap.exists()) {
-          const target = storyUrl(snap.val());
-          if (target) { window.location.href = target; return; }
-        }
+      const snap = await db.ref('stories/' + id).once('value');
+      if (snap.exists()) {
+        const target = storyUrl(snap.val());
+        if (target) { window.location.href = target; return; }
+        alert('এই গল্পে কোনো postLink সেট নেই। Admin থেকে postLink যোগ করুন।');
       }
     } catch (e) {
       console.error('openStory error:', e);
     }
-    // No manual link set — alert admin to add postLink
-    console.warn('No postLink found for story id:', id);
   }
 
   function closeModal() {
@@ -1291,4 +1289,4 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
   loadCategories().finally(() => loadStories(initialPage, initialCategory, initialSearch));
 </script>
 </body>
-</html>
+      </html>
