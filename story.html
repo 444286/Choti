@@ -123,7 +123,10 @@ async function loadStory(){
     if(!s)return '';
     if(/^https?:\/\//i.test(s)){try{s=new URL(s).pathname;}catch(e){}}
     try{s=decodeURIComponent(s);}catch(e){}
-    return s.replace(/^\/+|\/+$/g,'');
+    s=s.replace(/^\/+|\/+$/g,'');
+    // Block reserved paths
+    if(!s||s==='story'||s==='story.html'||s==='index.html'||s==='admin')return '';
+    return s;
   };
   try{
     let story = window.__SERVER_STORY__ || null;
