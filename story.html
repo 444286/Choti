@@ -120,8 +120,13 @@ async function loadStory(){
         let wanted=String(wantedSlug||'');try{wanted=decodeURIComponent(wanted);}catch(e){}
         wanted=normalize(wanted);
         for(const [id,item] of Object.entries(all)){
-          const candidates=[item.postLink,item.urlSlug,item.slug,romanizeBanglaSlug(item.title||item.slug)]
-            .map(normalize).filter(Boolean);
+          const candidates=[item.postLink,item.customLink,item.manualLink,item.postUrl,item.permalink,item.urlSlug,item.slug,romanizeBanglaSlug(item.title||item.slug)]
+            .map(value=>{
+              let v=String(value||'').trim();
+              if(/^https?:\/\//i.test(v)){try{v=new URL(v).pathname.split('/').filter(Boolean).pop()||'';}catch(e){}}
+              try{v=decodeURIComponent(v);}catch(e){}
+              return normalize(v);
+            }).filter(Boolean);
           if(candidates.includes(wanted)){
             story={...item,_id:item._id||id};
             break;
