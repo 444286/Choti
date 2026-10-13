@@ -7,9 +7,13 @@ export async function onRequest(context) {
     return context.next();
   }
 
-  // Single-segment manual post URL -> story.html?slug=<manual slug>
+  // Decode the path segment so Bangla/Unicode slugs come through correctly.
+  let slug;
+  try { slug = decodeURIComponent(path); } catch(e) { slug = path; }
+
+  // Single-segment manual post URL -> story.html?slug=<decoded slug>
   url.pathname = "/story.html";
-  url.searchParams.set("slug", decodeURIComponent(path));
+  url.searchParams.set("slug", slug);
 
   return context.env.ASSETS.fetch(new Request(url.toString(), context.request));
 }
