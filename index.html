@@ -941,7 +941,7 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
       }).join('');
 
       return `
-        <div class="story-card" data-story-id="${s._id || ''}" data-story-slug="${s.slug || ''}" onclick="openStory(this.dataset.storySlug, this.dataset.storyId)">
+        <div class="story-card" data-story-id="${s._id || ''}" data-story-slug="${s.slug || ''}" data-post-link="${s.postLink || s.customLink || s.manualLink || s.urlSlug || s.slug || ''}" onclick="openStory(this.dataset.postLink||this.dataset.storySlug, this.dataset.storyId)">
           <div class="story-thumb">
             ${imgHtml}
             ${badge}
@@ -1004,12 +1004,14 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
     return String(value||'').toLowerCase().normalize('NFKD').split('').map(ch=>map[ch] ?? ch).join('').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').replace(/-+/g,'-') || 'story';
   }
   function storyUrl(story) {
+    // postLink is the admin-defined manual link — use it as-is (raw)
     let slug = String(story.postLink || story.customLink || story.manualLink || story.postUrl || story.permalink || story.urlSlug || story.slug || '').trim();
     if (/^https?:\/\//i.test(slug)) { try { slug = new URL(slug).pathname.split('/').filter(Boolean).pop() || ''; } catch(e) {} }
     try { slug = decodeURIComponent(slug); } catch(e) {}
-    slug = slug.replace(/^\/+|\/+$/g, '');
-    if (!slug || slug.includes('/')) slug = romanizeBanglaSlug(story.title || 'story');
-    return `/${encodeURIComponent(slug)}`;
+    slug = slug.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '-');
+    // Only fall back to romanized title if no manual link was set
+    if (!slug) slug = romanizeBanglaSlug(story.title || 'story');
+    return '/' + encodeURIComponent(slug);
   }
   async function openStory(slug, id) {
     // Always resolve the clicked card against Firebase first so the admin's
@@ -1314,4 +1316,4 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
   loadCategories().finally(() => loadStories(initialPage, initialCategory, initialSearch));
 </script>
 </body>
-</html>
+  </html>
