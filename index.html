@@ -1004,9 +1004,8 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
     return String(value||'').toLowerCase().normalize('NFKD').split('').map(ch=>map[ch] ?? ch).join('').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').replace(/-+/g,'-') || 'story';
   }
   function storyUrl(story) {
-    const cat = Array.isArray(story.categories) && story.categories.length ? story.categories[0] : 'bangla-story';
     const slug = romanizeBanglaSlug(story.title || story.slug || 'story');
-    return `/${encodeURIComponent(cat)}/${encodeURIComponent(slug)}/`;
+    return `/${encodeURIComponent(slug)}`;
   }
   async function openStory(slug, id) {
     if (id) {
@@ -1016,7 +1015,7 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
       } catch (e) {}
     }
     if (slug && slug !== 'story' && slug !== 'story.html') {
-      window.location.href = `/bangla-story/${encodeURIComponent(romanizeBanglaSlug(slug))}/`;
+      window.location.href = `/${encodeURIComponent(romanizeBanglaSlug(slug))}`;
     }
   }
 
@@ -1277,4 +1276,4 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
   loadCategories().finally(() => loadStories(initialPage, initialCategory, initialSearch));
 </script>
 </body>
-</html>
+  </html>
