@@ -1012,12 +1012,46 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
     return `/${encodeURIComponent(slug)}`;
   }
   async function openStory(slug, id) {
-    if (id) {
-      try {
-        const snap = await db.ref(`stories/${id}`).once('value');
-        if (snap.exists()) { window.location.href = storyUrl(snap.val()); return; }
-      } catch (e) {}
+    // Always resolve the clicked card against Firebase first so the admin's
+    // manual postLink wins over the automatically generated title slug.
+    try {
+      if (id) {
+        const direct = await db.ref(`stories/${id}`).once('value');
+        if (direct.exists()) {
+          const item = direct.val();
+          const target = storyUrl(item);
+          if (target && target !== '/story' && target !== '/story.html') {
+            window.location.href = target;
+            return;
+          }
+        }
+      }
+
+      const snap = await db.ref('stories').once('value');
+      const all = snap.val() || {};
+      const norm = value => {
+        let v = String(value || '').trim();
+        if (/^https?:\/\//i.test(v)) {
+          try { v = new URL(v).pathname.split('/').filter(Boolean).pop() || ''; } catch (e) {}
+        }
+        try { v = decodeURIComponent(v); } catch (e) {}
+        return v.replace(/^\/+|\/+$/g, '').toLowerCase();
+      };
+      const wanted = norm(slug);
+      for (const [key, item] of Object.entries(all)) {
+        const itemId = String(item._id || key);
+        const candidates = [item.slug, item.title, item.postLink, item.customLink,
+          item.manualLink, item.postUrl, item.permalink, item.urlSlug].map(norm);
+        if ((id && itemId === String(id)) || (wanted && candidates.includes(wanted))) {
+          const target = storyUrl(item);
+          if (target) { window.location.href = target; return; }
+        }
+      }
+    } catch (e) {
+      console.error('Unable to resolve manual post link:', e);
     }
+
+    // Fallback only if Firebase has no matching post.
     if (slug && slug !== 'story' && slug !== 'story.html') {
       window.location.href = `/${encodeURIComponent(romanizeBanglaSlug(slug))}`;
     }
@@ -1280,4 +1314,4 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
   loadCategories().finally(() => loadStories(initialPage, initialCategory, initialSearch));
 </script>
 </body>
-  </html>
+</html>
