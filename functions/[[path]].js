@@ -2,18 +2,15 @@ export async function onRequest(context) {
   const url = new URL(context.request.url);
   const path = url.pathname.replace(/^\/+|\/+$/g, "");
 
-  // Let homepage and actual static files pass through.
-  if (!path || path.includes(".") || path === "admin" || path === "story") {
+  // Homepage and static files — pass through as-is
+  if (!path || path.includes(".") || path === "admin") {
     return context.next();
   }
 
-  // Decode the path segment so Bangla/Unicode slugs come through correctly.
-  let slug;
-  try { slug = decodeURIComponent(path); } catch(e) { slug = path; }
+  // Rewrite to story.html — NO query params, story.html reads pathname itself
+  const rewrite = new URL(context.request.url);
+  rewrite.pathname = "/story.html";
+  rewrite.search = "";
 
-  // Single-segment manual post URL -> story.html?slug=<decoded slug>
-  url.pathname = "/story.html";
-  url.searchParams.set("slug", slug);
-
-  return context.env.ASSETS.fetch(new Request(url.toString(), context.request));
+  return context.env.ASSETS.fetch(new Request(rewrite.toString(), context.request));
 }
