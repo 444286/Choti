@@ -108,28 +108,47 @@ async function loadStory(){
   const querySlug=params.get('slug');
   const oldId=params.get('id');
   const isPlaceholder=!pathPart||pathPart==='story'||pathPart==='story.html'||pathPart==='index.html';
+  /* ── normalize: handles full URLs, Bangla, underscores, spaces ── */
+  const normalize=v=>{
+    let s=String(v||'').trim();
+    if(/^https?:\/\//i.test(s)){try{s=new URL(s).pathname.split('/').filter(Boolean).pop()||'';}catch(e){}}
+    try{s=decodeURIComponent(s);}catch(e){}
+    s=s.replace(/^\/+|\/+$/g,'');
+    return s.replace(/[\s_]+/g,'-').replace(/-+/g,'-').toLowerCase();
+  };
+  /* ── raw normalize: keeps Unicode (Bangla) chars as-is for exact match ── */
+  const rawNorm=v=>{
+    let s=String(v||'').trim();
+    if(/^https?:\/\//i.test(s)){try{s=new URL(s).pathname.split('/').filter(Boolean).pop()||'';}catch(e){}}
+    try{s=decodeURIComponent(s);}catch(e){}
+    return s.replace(/^\/+|\/+$/g,'').replace(/[\s_]+/g,'-').replace(/-+/g,'-');
+  };
   try{
     let story = window.__SERVER_STORY__ || null;
     if(!story){
       let wantedSlug=querySlug||(!isPlaceholder?pathPart:'');
       if(oldId){const snap=await db.ref(`stories/${oldId}`).once('value');if(snap.exists())story={...snap.val(),_id:oldId};}
       else if(wantedSlug){
-        const snap=await db.ref('stories').once('value');
-        const all=snap.val()||{};
-        const normalize=v=>cleanPostSlug(v).toLowerCase().replace(/\s+/g,'-');
-        let wanted=String(wantedSlug||'');try{wanted=decodeURIComponent(wanted);}catch(e){}
-        wanted=normalize(wanted);
-        for(const [id,item] of Object.entries(all)){
-          const candidates=[item.postLink,item.customLink,item.manualLink,item.postUrl,item.permalink,item.urlSlug,item.slug,romanizeBanglaSlug(item.title||item.slug)]
-            .map(value=>{
-              let v=String(value||'').trim();
-              if(/^https?:\/\//i.test(v)){try{v=new URL(v).pathname.split('/').filter(Boolean).pop()||'';}catch(e){}}
-              try{v=decodeURIComponent(v);}catch(e){}
-              return normalize(v);
-            }).filter(Boolean);
-          if(candidates.includes(wanted)){
-            story={...item,_id:item._id||id};
-            break;
+        const wanted=normalize(wantedSlug);
+        const rawWanted=rawNorm(wantedSlug);
+        /* 1️⃣ Fast path: exact Firebase index query on postLink */
+        const byLink=await db.ref('stories').orderByChild('postLink').equalTo(rawWanted).once('value');
+        if(byLink.exists()){const e=Object.entries(byLink.val()||{});if(e.length){const[id,item]=e[0];story={...item,_id:item._id||id};}}
+        /* 2️⃣ Fast path with leading slash */
+        if(!story){const bySlash=await db.ref('stories').orderByChild('postLink').equalTo('/'+rawWanted).once('value');if(bySlash.exists()){const e=Object.entries(bySlash.val()||{});if(e.length){const[id,item]=e[0];story={...item,_id:item._id||id};}}}
+        /* 3️⃣ Full scan — handles all field variants, Bangla slugs, full URLs */
+        if(!story){
+          const snap=await db.ref('stories').once('value');
+          const all=snap.val()||{};
+          const fields=['postLink','customLink','manualLink','postUrl','permalink','urlSlug','slug'];
+          for(const [id,item] of Object.entries(all)){
+            const norm_candidates=fields.map(f=>normalize(item[f])).filter(Boolean);
+            norm_candidates.push(normalize(romanizeBanglaSlug(item.title||item.slug)));
+            const raw_candidates=fields.map(f=>rawNorm(item[f])).filter(Boolean);
+            if(norm_candidates.includes(wanted)||raw_candidates.includes(rawWanted)){
+              story={...item,_id:item._id||id};
+              break;
+            }
           }
         }
       }
@@ -180,4 +199,4 @@ loadHeaderCategories();
 loadStory();
 </script>
 </body>
-  </html>
+</html>
