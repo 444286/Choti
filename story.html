@@ -77,9 +77,7 @@ function absUrl(v){try{return new URL(v,window.location.origin).href;}catch(e){r
 function setSEO(story){
   const title=String(story.title||'বাংলা গল্প').trim();
   const desc=String(story.excerpt||stripHTML(story.content).slice(0,160)||`${title} গল্পটি Bangla Choti Kahinii-তে পড়ুন।`).trim();
-  let canonicalSlug=String(story.postLink||story.urlSlug||story.slug||'').trim();
-  if(/^https?:\/\//i.test(canonicalSlug)){try{canonicalSlug=new URL(canonicalSlug).pathname.split('/').filter(Boolean).pop()||'';}catch(e){}}
-  canonicalSlug=canonicalSlug.replace(/^\/+|\/+$/g,'')||romanizeBanglaSlug(story.title||story.slug);
+  let canonicalSlug=cleanPostSlug(story.postLink||story.urlSlug||story.slug)||romanizeBanglaSlug(story.title||story.slug);
   const canonical=`https://banglachoti.pages.dev/${encodeURIComponent(canonicalSlug)}`;
   document.title=`${title} | Bangla Choti Kahinii`;
   const md=document.querySelector('meta[name="description"]'); if(md) md.content=desc;
@@ -99,7 +97,8 @@ async function getStoryLinks(id){try{const s=await db.ref(`stories/${id}/links`)
 function categoryMap(list){const m={};(list||[]).forEach(c=>m[c.slug]=c);return m;}
 function openCategory(slug){if(!slug)return;window.location.href=`/?category=${encodeURIComponent(slug)}`;}
 function romanizeBanglaSlug(value){const map={'অ':'o','আ':'a','ই':'i','ঈ':'i','উ':'u','ঊ':'u','ঋ':'ri','এ':'e','ঐ':'oi','ও':'o','ঔ':'ou','া':'a','ি':'i','ী':'i','ু':'u','ূ':'u','ৃ':'ri','ে':'e','ৈ':'oi','ো':'o','ৌ':'ou','ং':'ng','ঃ':'h','ঁ':'n','ক':'k','খ':'kh','গ':'g','ঘ':'gh','ঙ':'ng','চ':'ch','ছ':'chh','জ':'j','ঝ':'jh','ঞ':'n','ট':'t','ঠ':'th','ড':'d','ঢ':'dh','ণ':'n','ত':'t','থ':'th','দ':'d','ধ':'dh','ন':'n','প':'p','ফ':'ph','ব':'b','ভ':'bh','ম':'m','য':'j','য়':'y','র':'r','ল':'l','শ':'sh','ষ':'sh','স':'s','হ':'h','ড়':'r','ঢ়':'rh','ৎ':'t','্':'','়':'','ৱ':'w'};return String(value||'').toLowerCase().normalize('NFKD').split('').map(ch=>map[ch]??ch).join('').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').replace(/-+/g,'-')||'story';}
-function storyLink(item){const cat=Array.isArray(item.categories)&&item.categories.length?item.categories[0]:'bangla-story';return `/${encodeURIComponent(cat)}/${encodeURIComponent(romanizeBanglaSlug(item.title||item.slug))}/`;}
+function cleanPostSlug(value){let v=String(value||'').trim();if(/^https?:\/\//i.test(v)){try{v=new URL(v).pathname;}catch(e){}}v=v.split('/').filter(Boolean).pop()||'';try{v=decodeURIComponent(v);}catch(e){}return v.replace(/^\/+|\/+$/g,'');}
+function storyLink(item){const slug=cleanPostSlug(item.postLink||item.urlSlug||item.slug)||romanizeBanglaSlug(item.title||'story');return `/${encodeURIComponent(slug)}`;}
 function showError(){const app=document.getElementById('app');app.className='error';app.innerHTML='<div class="error-icon">⚠️</div><div class="error-text">গল্পটি পাওয়া যায়নি।</div><a class="home" href="/">← হোমে ফিরে যান</a>';}
 async function loadStory(){
   const app=document.getElementById('app');
@@ -114,7 +113,21 @@ async function loadStory(){
     if(!story){
       let wantedSlug=querySlug||(!isPlaceholder?pathPart:'');
       if(oldId){const snap=await db.ref(`stories/${oldId}`).once('value');if(snap.exists())story={...snap.val(),_id:oldId};}
-      else if(wantedSlug){const snap=await db.ref('stories').once('value');const all=snap.val()||{};const norm=v=>{let x=String(v||'').trim();if(/^https?:\/\//i.test(x)){try{x=new URL(x).pathname;}catch(e){}}return x.split('/').filter(Boolean).pop()||'';};for(const [id,item] of Object.entries(all)){const candidates=[norm(item.postLink),norm(item.urlSlug),norm(item.slug),romanizeBanglaSlug(item.title||item.slug)];if(candidates.includes(decodeURIComponent(wantedSlug))){story={...item,_id:item._id||id};break;}}}
+      else if(wantedSlug){
+        const snap=await db.ref('stories').once('value');
+        const all=snap.val()||{};
+        const normalize=v=>cleanPostSlug(v).toLowerCase().replace(/\s+/g,'-');
+        let wanted=String(wantedSlug||'');try{wanted=decodeURIComponent(wanted);}catch(e){}
+        wanted=normalize(wanted);
+        for(const [id,item] of Object.entries(all)){
+          const candidates=[item.postLink,item.urlSlug,item.slug,romanizeBanglaSlug(item.title||item.slug)]
+            .map(normalize).filter(Boolean);
+          if(candidates.includes(wanted)){
+            story={...item,_id:item._id||id};
+            break;
+          }
+        }
+      }
       if(!story||story.status==='draft')throw new Error('Story not found');
     }
     setSEO(story);
@@ -162,4 +175,4 @@ loadHeaderCategories();
 loadStory();
 </script>
 </body>
-  </html>
+</html>
