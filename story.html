@@ -77,8 +77,11 @@ function absUrl(v){try{return new URL(v,window.location.origin).href;}catch(e){r
 function setSEO(story){
   const title=String(story.title||'বাংলা গল্প').trim();
   const desc=String(story.excerpt||stripHTML(story.content).slice(0,160)||`${title} গল্পটি Bangla Choti Kahinii-তে পড়ুন।`).trim();
-  let canonicalSlug=cleanPostSlug(story.postLink||story.urlSlug||story.slug)||romanizeBanglaSlug(story.title||story.slug);
-  const canonical=`https://banglachoti.pages.dev/${encodeURIComponent(canonicalSlug)}`;
+  // Use admin's postLink as-is for canonical URL
+  let _cl=String(story.postLink||story.customLink||story.manualLink||'').trim();
+  if(/^https?:\/\//i.test(_cl)){try{_cl=new URL(_cl).pathname.replace(/^\/+|\/+$/g,'');}catch(e){}}
+  else{try{_cl=decodeURIComponent(_cl);}catch(e){}_cl=_cl.replace(/^\/+|\/+$/g,'');}
+  const canonical=`https://banglachoti.pages.dev/${_cl.split('/').map(encodeURIComponent).join('/')}`;
   document.title=`${title} | Bangla Choti Kahinii`;
   const md=document.querySelector('meta[name="description"]'); if(md) md.content=desc;
   const c=document.getElementById('canonicalLink'); if(c)c.href=canonical;
@@ -98,7 +101,15 @@ function categoryMap(list){const m={};(list||[]).forEach(c=>m[c.slug]=c);return 
 function openCategory(slug){if(!slug)return;window.location.href=`/?category=${encodeURIComponent(slug)}`;}
 function romanizeBanglaSlug(value){const map={'অ':'o','আ':'a','ই':'i','ঈ':'i','উ':'u','ঊ':'u','ঋ':'ri','এ':'e','ঐ':'oi','ও':'o','ঔ':'ou','া':'a','ি':'i','ী':'i','ু':'u','ূ':'u','ৃ':'ri','ে':'e','ৈ':'oi','ো':'o','ৌ':'ou','ং':'ng','ঃ':'h','ঁ':'n','ক':'k','খ':'kh','গ':'g','ঘ':'gh','ঙ':'ng','চ':'ch','ছ':'chh','জ':'j','ঝ':'jh','ঞ':'n','ট':'t','ঠ':'th','ড':'d','ঢ':'dh','ণ':'n','ত':'t','থ':'th','দ':'d','ধ':'dh','ন':'n','প':'p','ফ':'ph','ব':'b','ভ':'bh','ম':'m','য':'j','য়':'y','র':'r','ল':'l','শ':'sh','ষ':'sh','স':'s','হ':'h','ড়':'r','ঢ়':'rh','ৎ':'t','্':'','়':'','ৱ':'w'};return String(value||'').toLowerCase().normalize('NFKD').split('').map(ch=>map[ch]??ch).join('').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').replace(/-+/g,'-')||'story';}
 function cleanPostSlug(value){let v=String(value||'').trim();if(/^https?:\/\//i.test(v)){try{v=new URL(v).pathname;}catch(e){}}v=v.split('/').filter(Boolean).pop()||'';try{v=decodeURIComponent(v);}catch(e){}return v.replace(/^\/+|\/+$/g,'');}
-function storyLink(item){const slug=cleanPostSlug(item.postLink||item.urlSlug||item.slug)||romanizeBanglaSlug(item.title||'story');return `/${encodeURIComponent(slug)}`;}
+function storyLink(item){
+  let lnk=String(item.postLink||item.customLink||item.manualLink||'').trim();
+  if(!lnk)return '#';
+  if(/^https?:\/\//i.test(lnk)){try{lnk=new URL(lnk).pathname;}catch(e){}}
+  try{lnk=decodeURIComponent(lnk);}catch(e){}
+  lnk=lnk.replace(/^\/+|\/+$/g,'');
+  if(!lnk)return '#';
+  return '/'+lnk.split('/').map(encodeURIComponent).join('/');
+}
 function showError(){const app=document.getElementById('app');app.className='error';app.innerHTML='<div class="error-icon">⚠️</div><div class="error-text">গল্পটি পাওয়া যায়নি।</div><a class="home" href="/">← হোমে ফিরে যান</a>';}
 async function loadStory(){
   const app=document.getElementById('app');
@@ -108,44 +119,40 @@ async function loadStory(){
   const querySlug=params.get('slug');
   const oldId=params.get('id');
   const isPlaceholder=!pathPart||pathPart==='story'||pathPart==='story.html'||pathPart==='index.html';
-  /* ── normalize: handles full URLs, Bangla, underscores, spaces ── */
-  const normalize=v=>{
+  /* cleanLink: extract the slug portion from a postLink value (full URL or plain slug) */
+  const cleanLink=v=>{
     let s=String(v||'').trim();
-    if(/^https?:\/\//i.test(s)){try{s=new URL(s).pathname.split('/').filter(Boolean).pop()||'';}catch(e){}}
+    if(!s)return '';
+    if(/^https?:\/\//i.test(s)){try{s=new URL(s).pathname;}catch(e){}}
     try{s=decodeURIComponent(s);}catch(e){}
-    s=s.replace(/^\/+|\/+$/g,'');
-    return s.replace(/[\s_]+/g,'-').replace(/-+/g,'-').toLowerCase();
-  };
-  /* ── raw normalize: keeps Unicode (Bangla) chars as-is for exact match ── */
-  const rawNorm=v=>{
-    let s=String(v||'').trim();
-    if(/^https?:\/\//i.test(s)){try{s=new URL(s).pathname.split('/').filter(Boolean).pop()||'';}catch(e){}}
-    try{s=decodeURIComponent(s);}catch(e){}
-    return s.replace(/^\/+|\/+$/g,'').replace(/[\s_]+/g,'-').replace(/-+/g,'-');
+    return s.replace(/^\/+|\/+$/g,'');
   };
   try{
     let story = window.__SERVER_STORY__ || null;
     if(!story){
-      let wantedSlug=querySlug||(!isPlaceholder?pathPart:'');
-      if(oldId){const snap=await db.ref(`stories/${oldId}`).once('value');if(snap.exists())story={...snap.val(),_id:oldId};}
-      else if(wantedSlug){
-        const wanted=normalize(wantedSlug);
-        const rawWanted=rawNorm(wantedSlug);
-        /* 1️⃣ Fast path: exact Firebase index query on postLink */
-        const byLink=await db.ref('stories').orderByChild('postLink').equalTo(rawWanted).once('value');
-        if(byLink.exists()){const e=Object.entries(byLink.val()||{});if(e.length){const[id,item]=e[0];story={...item,_id:item._id||id};}}
-        /* 2️⃣ Fast path with leading slash */
-        if(!story){const bySlash=await db.ref('stories').orderByChild('postLink').equalTo('/'+rawWanted).once('value');if(bySlash.exists()){const e=Object.entries(bySlash.val()||{});if(e.length){const[id,item]=e[0];story={...item,_id:item._id||id};}}}
-        /* 3️⃣ Full scan — handles all field variants, Bangla slugs, full URLs */
+      const wantedRaw=querySlug||(!isPlaceholder?pathPart:'');
+      if(!wantedRaw&&!oldId){throw new Error('No slug');}
+      if(oldId){
+        /* Legacy: lookup by Firebase push-key */
+        const snap=await db.ref(`stories/${oldId}`).once('value');
+        if(snap.exists())story={...snap.val(),_id:oldId};
+      } else {
+        const wanted=cleanLink(wantedRaw);
+        /* 1️⃣ Direct index query — fastest, works when postLink stored as plain slug */
+        const q1=await db.ref('stories').orderByChild('postLink').equalTo(wanted).once('value');
+        if(q1.exists()){const e=Object.entries(q1.val());if(e.length){const[id,item]=e[0];story={...item,_id:item._id||id};}}
+        /* 2️⃣ Try with leading slash */
+        if(!story){
+          const q2=await db.ref('stories').orderByChild('postLink').equalTo('/'+wanted).once('value');
+          if(q2.exists()){const e=Object.entries(q2.val());if(e.length){const[id,item]=e[0];story={...item,_id:item._id||id};}}
+        }
+        /* 3️⃣ Full scan — compares cleanLink of ALL postLink/customLink/manualLink fields */
         if(!story){
           const snap=await db.ref('stories').once('value');
           const all=snap.val()||{};
-          const fields=['postLink','customLink','manualLink','postUrl','permalink','urlSlug','slug'];
           for(const [id,item] of Object.entries(all)){
-            const norm_candidates=fields.map(f=>normalize(item[f])).filter(Boolean);
-            norm_candidates.push(normalize(romanizeBanglaSlug(item.title||item.slug)));
-            const raw_candidates=fields.map(f=>rawNorm(item[f])).filter(Boolean);
-            if(norm_candidates.includes(wanted)||raw_candidates.includes(rawWanted)){
+            const links=[item.postLink,item.customLink,item.manualLink].map(cleanLink).filter(Boolean);
+            if(links.includes(wanted)){
               story={...item,_id:item._id||id};
               break;
             }
