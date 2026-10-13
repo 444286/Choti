@@ -999,29 +999,24 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
       .replace(/^_+|_+$/g, '');
   }
 
+  function romanizeBanglaSlug(value) {
+    const map = {'অ':'o','আ':'a','ই':'i','ঈ':'i','উ':'u','ঊ':'u','ঋ':'ri','এ':'e','ঐ':'oi','ও':'o','ঔ':'ou','া':'a','ি':'i','ী':'i','ু':'u','ূ':'u','ৃ':'ri','ে':'e','ৈ':'oi','ো':'o','ৌ':'ou','ং':'ng','ঃ':'h','ঁ':'n','ক':'k','খ':'kh','গ':'g','ঘ':'gh','ঙ':'ng','চ':'ch','ছ':'chh','জ':'j','ঝ':'jh','ঞ':'n','ট':'t','ঠ':'th','ড':'d','ঢ':'dh','ণ':'n','ত':'t','থ':'th','দ':'d','ধ':'dh','ন':'n','প':'p','ফ':'ph','ব':'b','ভ':'bh','ম':'m','য':'j','য়':'y','র':'r','ল':'l','শ':'sh','ষ':'sh','স':'s','হ':'h','ড়':'r','ঢ়':'rh','ৎ':'t','্':'','়':'','ৱ':'w'};
+    return String(value||'').toLowerCase().normalize('NFKD').split('').map(ch=>map[ch] ?? ch).join('').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').replace(/-+/g,'-') || 'story';
+  }
+  function storyUrl(story) {
+    const cat = Array.isArray(story.categories) && story.categories.length ? story.categories[0] : 'bangla-story';
+    const slug = romanizeBanglaSlug(story.title || story.slug || 'story');
+    return `/${encodeURIComponent(cat)}/${encodeURIComponent(slug)}/`;
+  }
   async function openStory(slug, id) {
-    // Never send users to /story. If the API already gives a slug, use it.
-    if (slug && slug !== 'story' && slug !== 'story.html') {
-      window.location.href = `/story.html?slug=${encodeURIComponent(slug)}`;
-      return;
-    }
-
-    // Old posts may not have a slug. Fetch the post once by ID, then use its
-    // server-generated slug. If unavailable, open by ID as a safe fallback.
     if (id) {
       try {
         const snap = await db.ref(`stories/${id}`).once('value');
-        if (snap.exists()) {
-          const story = snap.val();
-          const serverSlug = story.slug;
-          if (serverSlug && serverSlug !== 'story' && serverSlug !== 'story.html') {
-            window.location.href = `/${encodeURIComponent(serverSlug)}/`;
-            return;
-          }
-        }
+        if (snap.exists()) { window.location.href = storyUrl(snap.val()); return; }
       } catch (e) {}
-
-      window.location.href = `/story.html?id=${encodeURIComponent(id)}`;
+    }
+    if (slug && slug !== 'story' && slug !== 'story.html') {
+      window.location.href = `/bangla-story/${encodeURIComponent(romanizeBanglaSlug(slug))}/`;
     }
   }
 
