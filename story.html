@@ -109,31 +109,53 @@ function setSEO(story){
 async function getCategories(){try{const s=await db.ref('categories').once('value');return Object.entries(s.val()||{}).map(([id,c])=>({...c,_id:c._id||id}));}catch(e){return[];}}
 
 /* ── Find prev/next part for current story ─────────────────────────── */
+/* Logic: slug format is "story-name-1", "story-name-2" etc.
+   We extract the numeric suffix, then look for slug with (N-1) and (N+1).
+   If suffix is 1 → no prev. If no story found with N+1 → no next.        */
 async function findPrevNext(currentStory){
   try{
-    // current story's own postLink (clean)
-    const myLink=String(currentStory.postLink||currentStory.customLink||currentStory.manualLink||'').trim()
-      .replace(/^https?:\/\//i,'').replace(/^\/+|\/+$/g,'').split('/').pop();
-    if(!myLink)return {prev:null,next:null};
+    const myRaw=String(currentStory.postLink||currentStory.customLink||currentStory.manualLink||'').trim();
+    let mySlug=myRaw.replace(/^https?:\/\//i,'').replace(/^\/+|\/+$/g,'').split('/').pop();
+    try{mySlug=decodeURIComponent(mySlug);}catch(e){}
+    if(!mySlug)return {prev:null,next:null};
 
-    // Scan all stories that have series parts
-    const snap=await db.ref('stories').once('value');
-    const all=snap.val()||{};
-    for(const [sid,s] of Object.entries(all)){
-      const parts=(s.links&&s.links.series&&Array.isArray(s.links.series.parts))?s.links.series.parts:[];
-      if(!parts.length)continue;
-      // Check if current story is in this series
-      const idx=parts.findIndex(p=>{
-        const pl=String(p.postLink||p.customLink||p.manualLink||'').trim()
-          .replace(/^https?:\/\//i,'').replace(/^\/+|\/+$/g,'').split('/').pop();
-        return pl===myLink;
-      });
-      if(idx===-1)continue;
-      return {
-        prev: idx>0 ? parts[idx-1] : null,
-        next: idx<parts.length-1 ? parts[idx+1] : null
-      };
+    /* Extract numeric suffix: "bidhoba-vabir-golpo-3" → base="bidhoba-vabir-golpo", num=3 */
+    const m=mySlug.match(/^(.*)-(\d+)$/);
+    if(!m)return {prev:null,next:null}; // no numeric suffix → single-part story, no nav
+
+    const base=m[1];
+    const num=parseInt(m[2],10);
+    if(num<1)return {prev:null,next:null};
+
+    /* Helper: find story by slug suffix from Firebase */
+    async function findBySlug(slug){
+      // 1. exact orderByChild query
+      const q1=await db.ref('stories').orderByChild('postLink').equalTo(slug).once('value');
+      if(q1.exists()){const e=Object.entries(q1.val());if(e.length){const[id,it]=e[0];return{...it,_id:it._id||id};}}
+      // 2. with leading slash
+      const q2=await db.ref('stories').orderByChild('postLink').equalTo('/'+slug).once('value');
+      if(q2.exists()){const e=Object.entries(q2.val());if(e.length){const[id,it]=e[0];return{...it,_id:it._id||id};}}
+      // 3. full scan – postLink / customLink / manualLink
+      const snap=await db.ref('stories').once('value');
+      const all=snap.val()||{};
+      for(const [id,it] of Object.entries(all)){
+        const links=[it.postLink,it.customLink,it.manualLink].map(v=>{
+          if(!v)return '';
+          let s=String(v).trim().replace(/^https?:\/\//i,'').replace(/^\/+|\/+$/g,'');
+          try{s=decodeURIComponent(s);}catch(e){}
+          return s.split('/').pop()||'';
+        }).filter(Boolean);
+        if(links.includes(slug))return{...it,_id:it._id||id};
+      }
+      return null;
     }
+
+    /* Check prev (num-1): hide if num===1 (already first part) */
+    const prevStory = num>1 ? await findBySlug(`${base}-${num-1}`) : null;
+    /* Check next (num+1): hide if not found in DB */
+    const nextStory = await findBySlug(`${base}-${num+1}`);
+
+    return {prev:prevStory, next:nextStory};
   }catch(e){console.error('findPrevNext error',e);}
   return {prev:null,next:null};
 }
@@ -298,11 +320,11 @@ async function loadStory(){
     // Find prev/next part navigation
     const {prev:prevPart, next:nextPart} = await findPrevNext(story);
     const prevHtml = prevPart
-      ? `<a href="${storyLink(prevPart)}">← ${escapeHTML(prevPart.title||'আগের পর্ব')}</a>`
-      : '<span></span>';
+      ? `<a href="${storyLink(prevPart)}">← আগের পর্ব</a>`
+      : '';
     const nextHtml = nextPart
-      ? `<a href="${storyLink(nextPart)}">${escapeHTML(nextPart.title||'পরের পর্ব')} →</a>`
-      : '<span></span>';
+      ? `<a href="${storyLink(nextPart)}">পরের পর্ব →</a>`
+      : '';
     const hasPorboNav = prevPart || nextPart;
     const porboNavHtml = hasPorboNav
       ? `<div class="porbo-nav">${prevHtml}<div class="spacer"></div>${nextHtml}</div>`
