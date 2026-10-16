@@ -113,10 +113,16 @@ function storyLink(item){
 function showError(){const app=document.getElementById('app');app.className='error';app.innerHTML='<div class="error-icon">⚠️</div><div class="error-text">গল্পটি পাওয়া যায়নি।</div><a class="home" href="/">← হোমে ফিরে যান</a>';}
 async function loadStory(){
   const app=document.getElementById('app');
-  /* Read slug ONLY from pathname — e.g. /amar-golpo → "amar-golpo" */
+  const params=new URLSearchParams(window.location.search);
+  /* slug comes from server-side rewrite via ?slug= — browser URL is already clean */
+  const slugFromParam=params.get('slug')||'';
+  const oldId=params.get('id')||'';
+  /* Also check pathname directly for direct visits */
   const pathParts=window.location.pathname.split('/').filter(Boolean);
-  const pathSlug=pathParts.length?decodeURIComponent(pathParts[pathParts.length-1]):'';
-  const oldId=new URLSearchParams(window.location.search).get('id');
+  const slugFromPath=pathParts.length?decodeURIComponent(pathParts[pathParts.length-1]):'';
+  const reservedPaths=['story','story.html','index.html','admin',''];
+  const rawSlug=slugFromParam||(reservedPaths.includes(slugFromPath)?'':slugFromPath);
+
   /* cleanLink: strip domain/slashes from a postLink value */
   const cleanLink=v=>{
     let s=String(v||'').trim();
@@ -124,38 +130,42 @@ async function loadStory(){
     if(/^https?:\/\//i.test(s)){try{s=new URL(s).pathname;}catch(e){}}
     try{s=decodeURIComponent(s);}catch(e){}
     s=s.replace(/^\/+|\/+$/g,'');
-    // Block reserved paths
-    if(!s||s==='story'||s==='story.html'||s==='index.html'||s==='admin')return '';
+    if(!s||reservedPaths.includes(s))return '';
     return s;
   };
+
+  /* Clean the browser URL — remove ?slug= so user sees /postLink */
+  if(slugFromParam&&window.history&&window.history.replaceState){
+    const cleanUrl='/'+slugFromParam.split('/').map(encodeURIComponent).join('/');
+    window.history.replaceState(null,'',cleanUrl);
+  }
+
   try{
     let story = window.__SERVER_STORY__ || null;
     if(!story){
-      const wantedRaw=pathSlug;
-      if(!wantedRaw&&!oldId){throw new Error('No slug');}
+      if(!rawSlug&&!oldId){throw new Error('No slug');}
       if(oldId){
-        /* Legacy: lookup by Firebase push-key */
         const snap=await db.ref(`stories/${oldId}`).once('value');
         if(snap.exists())story={...snap.val(),_id:oldId};
       } else {
-        const wanted=cleanLink(wantedRaw);
-        /* 1️⃣ Direct index query — fastest, works when postLink stored as plain slug */
+        const wanted=cleanLink(rawSlug);
+        if(!wanted){throw new Error('No slug');}
+        /* 1️⃣ Firebase index query — exact match on postLink */
         const q1=await db.ref('stories').orderByChild('postLink').equalTo(wanted).once('value');
         if(q1.exists()){const e=Object.entries(q1.val());if(e.length){const[id,item]=e[0];story={...item,_id:item._id||id};}}
-        /* 2️⃣ Try with leading slash */
+        /* 2️⃣ With leading slash */
         if(!story){
           const q2=await db.ref('stories').orderByChild('postLink').equalTo('/'+wanted).once('value');
           if(q2.exists()){const e=Object.entries(q2.val());if(e.length){const[id,item]=e[0];story={...item,_id:item._id||id};}}
         }
-        /* 3️⃣ Full scan — compares cleanLink of ALL postLink/customLink/manualLink fields */
+        /* 3️⃣ Full scan — check postLink, customLink, manualLink */
         if(!story){
           const snap=await db.ref('stories').once('value');
           const all=snap.val()||{};
           for(const [id,item] of Object.entries(all)){
             const links=[item.postLink,item.customLink,item.manualLink].map(cleanLink).filter(Boolean);
-            if(links.includes(wanted)){
-              story={...item,_id:item._id||id};
-              break;
+            if(links.includes(wanted)||links.includes(rawSlug)){
+              story={...item,_id:item._id||id};break;
             }
           }
         }
