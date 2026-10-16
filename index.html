@@ -954,10 +954,6 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
 
       return `
         <div class="story-card" data-story-id="${s._id || ''}" onclick="openStory(this.dataset.storyId)">
-          <div class="story-thumb">
-            ${imgHtml}
-            ${badge}
-          </div>
           <div class="story-body">
             <div class="story-title">${s.title}</div>
             <div class="story-meta">
