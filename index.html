@@ -523,42 +523,56 @@
     /* ===== PAGINATION ===== */
     .pagination {
       display: flex;
-      align-items: center;
-      justify-content: center;
+      flex-direction: column;
+      align-items: stretch;
       gap: 8px;
-      padding: 24px 14px 32px;
+      padding: 20px 14px 32px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .pagination-nums {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
       flex-wrap: wrap;
     }
     .page-btn {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
+      flex: 1;
+      min-width: 52px;
+      max-width: 120px;
+      height: 52px;
+      border-radius: 10px;
       border: 2px solid var(--border);
-      background: #fff;
+      background: var(--green-bg);
+      color: var(--text-dark);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Hind Siliguri', sans-serif;
+    }
+    .page-btn:hover { border-color: var(--green-main); background: #d0f0e0; }
+    .page-btn.active { background: var(--green-main); color: #fff; border-color: var(--green-main); }
+    .pagination-nav {
+      display: flex;
+      gap: 8px;
+    }
+    .page-prev, .page-next {
+      flex: 1;
+      height: 52px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--green-bg);
       color: var(--text-dark);
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       transition: all 0.2s;
       font-family: 'Hind Siliguri', sans-serif;
     }
-    .page-btn:hover { border-color: var(--green-main); color: var(--green-main); }
-    .page-btn.active { background: var(--green-main); color: #fff; border-color: var(--green-main); }
-    .page-prev, .page-next {
-      padding: 0 16px;
-      height: 38px;
-      border-radius: 22px;
-      border: 2px solid var(--border);
-      background: var(--green-dark);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: 'Hind Siliguri', sans-serif;
-    }
-    .page-prev:hover, .page-next:hover { background: var(--green-main); }
-    .page-dots { color: var(--text-light); font-size: 18px; padding: 0 4px; }
+    .page-prev:hover, .page-next:hover { background: #d0f0e0; border-color: var(--green-main); }
+    .page-prev:disabled, .page-next:disabled { opacity: 0.35; cursor: default; }
+    .page-dots { color: var(--text-light); font-size: 18px; display:flex; align-items:center; padding: 0 4px; }
 
     /* ===== FOOTER ===== */
     .footer {
@@ -664,6 +678,10 @@
     body.dark .search-bar input { background: #0d2018; color: #e8f5ee; }
     body.dark .story-cat { background: #1a3d28; color: #7cffab; }
     body.dark .page-btn { background: #0d2018; border-color: #1e3d2a; color: #e8f5ee; }
+    body.dark .page-btn:hover { background: #1a3d28; border-color: #2ea05c; }
+    body.dark .page-btn.active { background: var(--green-main); color: #fff; border-color: var(--green-main); }
+    body.dark .page-prev, body.dark .page-next { background: #0d2018; border-color: #1e3d2a; color: #e8f5ee; }
+    body.dark .page-prev:hover, body.dark .page-next:hover { background: #1a3d28; border-color: #2ea05c; }
     body.dark .modal-box { background: #0d2018; }
     body.dark .modal-content { color: #e8f5ee; }
 
@@ -976,21 +994,34 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
     const wrap = document.getElementById('paginationWrap');
     if (totalPages <= 1) { wrap.innerHTML = ''; return; }
 
+    // Smart page range: show up to 5 page numbers around current page
     let pages = [];
     if (totalPages <= 7) {
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
-      pages = [1, 2, 3, 4, 5, '...', totalPages];
+      // Always show: 1, ..., (page-1), page, (page+1), ..., totalPages
+      const delta = 1;
+      const left = Math.max(2, page - delta);
+      const right = Math.min(totalPages - 1, page + delta);
+      pages.push(1);
+      if (left > 2) pages.push('...');
+      for (let i = left; i <= right; i++) pages.push(i);
+      if (right < totalPages - 1) pages.push('...');
+      pages.push(totalPages);
     }
 
+    const numBtns = pages.map(p =>
+      p === '...'
+        ? `<span class="page-dots">...</span>`
+        : `<button class="page-btn ${p === page ? 'active' : ''}" onclick="changePage(${p})">${p}</button>`
+    ).join('');
+
     wrap.innerHTML = `
-      <button class="page-prev" onclick="changePage(${Math.max(1, page-1)})" ${page === 1 ? 'disabled' : ''}>← Previous</button>
-      ${pages.map(p =>
-        p === '...'
-          ? `<span class="page-dots">...</span>`
-          : `<button class="page-btn ${p === page ? 'active' : ''}" onclick="changePage(${p})">${p}</button>`
-      ).join('')}
-      <button class="page-next" onclick="changePage(${Math.min(totalPages, page+1)})" ${page === totalPages ? 'disabled' : ''}>Next →</button>
+      <div class="pagination-nums">${numBtns}</div>
+      <div class="pagination-nav">
+        <button class="page-prev" onclick="changePage(${Math.max(1, page-1)})" ${page === 1 ? 'disabled' : ''}>← Previous</button>
+        <button class="page-next" onclick="changePage(${Math.min(totalPages, page+1)})" ${page === totalPages ? 'disabled' : ''}>Next →</button>
+      </div>
     `;
   }
 
