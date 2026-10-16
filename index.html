@@ -882,7 +882,20 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
     return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
   }
 
+  // Categories auto-update via realtime listener
+  let _catListenerAttached = false;
+  function attachCategoryListener(){
+    if(_catListenerAttached)return;
+    _catListenerAttached=true;
+    db.ref('categories').on('value', snap=>{
+      const raw=snap.val()||{};
+      categoryList=Object.entries(raw).map(([id,c])=>({...c,_id:c._id||id}));
+      categoryMap={}; categoryList.forEach(c=>{if(c&&c.slug)categoryMap[String(c.slug)]=c;});
+      renderCategoryMenu(); renderCategoryOverlay();
+    }, e=>console.error('Category listener error',e));
+  }
   async function loadCategories(force = false) {
+    attachCategoryListener();
     if(categoryList.length&&!force)return categoryList;
     try{
       const snap=await db.ref('categories').once('value');
