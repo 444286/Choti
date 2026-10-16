@@ -244,7 +244,7 @@ async function loadStory(){
       : '';
 
     app.className='article';
-    app.innerHTML=`<div class="head"><h1 class="title">${escapeHTML(story.title||'গল্প')}</h1><div class="meta"><span>👤 ${escapeHTML(story.author||'অজ্ঞাত')}</span>${date?`<span>📅 ${date}</span>`:''}<span>👁 ${(Number(story.views)||0).toLocaleString('bn-BD')}</span></div></div><article class="content">${story.content||''}</article>${categoryHtml}${linksHtml}`;
+    app.innerHTML=`<div class="head"><h1 class="title">${escapeHTML(story.title||'গল্প')}</h1><div class="meta"><span>👤 ${escapeHTML(story.author||'অজ্ঞাত')}</span>${date?`<span>📅 ${date}</span>`:''}<span>👁 ${(Number(story.views)||0).toLocaleString('bn-BD')}</span></div></div><article class="content">${story.content||''}</article>${linksHtml}${categoryHtml}`;
     // Exact heading labels requested by the site owner.
     app.querySelectorAll('*').forEach(el=>{ if(el.children.length===0){ if(el.textContent.trim()==='এই গল্পের বিভাগ') el.textContent='ক্যাটাগরি'; if(el.textContent.trim()==='এই বিভাগের আরও গল্প') el.textContent='আরও অন্যান্য গল্প'; }});
   }catch(e){console.error(e);showError();}
