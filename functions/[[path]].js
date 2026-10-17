@@ -34,6 +34,7 @@ export async function onRequest(context) {
     return originalResp;
   }
 
+  // Build the correct canonical URL for this story
   const canonicalUrl = `https://banglachoti.pages.dev/${path
     .split("/")
     .map(encodeURIComponent)
@@ -41,19 +42,18 @@ export async function onRequest(context) {
 
   let html = await originalResp.text();
 
-  // Replace canonical — use regex to handle any whitespace variation
+  // Inject canonical — replace the empty href="" with correct URL
   html = html.replace(
-    /<link\s+id="canonicalLink"\s+rel="canonical"\s+href="[^"]*"\s*\/?>/,
+    '<link id="canonicalLink" rel="canonical" href="">',
     `<link id="canonicalLink" rel="canonical" href="${canonicalUrl}">`
   );
 
-  // Replace og:url — use regex
+  // Inject og:url — replace the empty content="" with correct URL  
   html = html.replace(
-    /<meta\s+id="ogUrl"\s+property="og:url"\s+content="[^"]*"\s*\/?>/,
+    '<meta id="ogUrl" property="og:url" content="">',
     `<meta id="ogUrl" property="og:url" content="${canonicalUrl}">`
   );
 
-  // Build new headers — disable Cloudflare cache for story pages so canonical is always fresh
   const newHeaders = new Headers(originalResp.headers);
   newHeaders.set("Cache-Control", "no-store");
 
