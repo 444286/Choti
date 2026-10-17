@@ -17,7 +17,8 @@ export async function onRequest(context) {
     return context.next();
   }
 
-  // Rewrite to story.html
+  // ===== STORY PAGE — canonical fix =====
+  // Rewrite to story.html and inject correct canonical URL
   let slug;
   try { slug = decodeURIComponent(path); } catch(e) { slug = path; }
 
@@ -25,7 +26,40 @@ export async function onRequest(context) {
   rewrite.pathname = "/story.html";
   rewrite.search = "?slug=" + encodeURIComponent(slug);
 
-  return context.env.ASSETS.fetch(new Request(rewrite.toString(), context.request));
+  const originalResp = await context.env.ASSETS.fetch(
+    new Request(rewrite.toString(), context.request)
+  );
+
+  // Only modify HTML responses
+  const contentType = originalResp.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) {
+    return originalResp;
+  }
+
+  // Inject correct canonical URL into the HTML before Google sees it
+  const canonicalUrl = `https://banglachoti.pages.dev/${path
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
+
+  let html = await originalResp.text();
+
+  // Replace the default homepage canonical with the actual story URL
+  html = html.replace(
+    `<link id="canonicalLink" rel="canonical" href="https://banglachoti.pages.dev/">`,
+    `<link id="canonicalLink" rel="canonical" href="${canonicalUrl}">`
+  );
+
+  // Also fix og:url default
+  html = html.replace(
+    `<meta id="ogUrl" property="og:url" content="https://banglachoti.pages.dev/">`,
+    `<meta id="ogUrl" property="og:url" content="${canonicalUrl}">`
+  );
+
+  return new Response(html, {
+    status: originalResp.status,
+    headers: originalResp.headers,
+  });
 }
 
 // ===== ROBOTS.TXT =====
@@ -56,7 +90,6 @@ async function handleSitemap(context, url) {
   const FIREBASE_URL =
     "https://jobs-33e35-default-rtdb.asia-southeast1.firebasedatabase.app";
 
-  // Static pages
   const staticUrls = [
     { loc: `${origin}/`, priority: "1.0", changefreq: "daily" },
   ];
@@ -65,7 +98,6 @@ async function handleSitemap(context, url) {
   let categoryUrls = [];
 
   try {
-    // ===== Categories fetch =====
     const catResp = await fetch(`${FIREBASE_URL}/categories.json`);
     if (catResp.ok) {
       const cats = await catResp.json();
@@ -81,17 +113,13 @@ async function handleSitemap(context, url) {
       }
     }
 
-    // ===== Stories fetch — সব stories এনে JS-এ filter =====
-    // orderBy query বাদ — simple .json fetch, তারপর published filter
     const storiesResp = await fetch(`${FIREBASE_URL}/stories.json`);
     if (storiesResp.ok) {
       const stories = await storiesResp.json();
       if (stories && typeof stories === "object") {
         for (const [id, story] of Object.entries(stories)) {
-          // Draft বাদ দাও
           if (!story || story.status === "draft") continue;
 
-          // postLink থেকে slug বের করো
           let slug = story.postLink || story.customLink || story.manualLink || "";
           if (!slug) continue;
 
