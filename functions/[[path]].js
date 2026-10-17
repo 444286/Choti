@@ -17,8 +17,7 @@ export async function onRequest(context) {
     return context.next();
   }
 
-  // ===== STORY PAGE — canonical fix =====
-  // Rewrite to story.html and inject correct canonical URL
+  // ===== STORY PAGE — server-side canonical injection =====
   let slug;
   try { slug = decodeURIComponent(path); } catch(e) { slug = path; }
 
@@ -30,13 +29,11 @@ export async function onRequest(context) {
     new Request(rewrite.toString(), context.request)
   );
 
-  // Only modify HTML responses
   const contentType = originalResp.headers.get("content-type") || "";
   if (!contentType.includes("text/html")) {
     return originalResp;
   }
 
-  // Inject correct canonical URL into the HTML before Google sees it
   const canonicalUrl = `https://banglachoti.pages.dev/${path
     .split("/")
     .map(encodeURIComponent)
@@ -44,21 +41,25 @@ export async function onRequest(context) {
 
   let html = await originalResp.text();
 
-  // Replace the default homepage canonical with the actual story URL
+  // Replace canonical — use regex to handle any whitespace variation
   html = html.replace(
-    `<link id="canonicalLink" rel="canonical" href="https://banglachoti.pages.dev/">`,
+    /<link\s+id="canonicalLink"\s+rel="canonical"\s+href="[^"]*"\s*\/?>/,
     `<link id="canonicalLink" rel="canonical" href="${canonicalUrl}">`
   );
 
-  // Also fix og:url default
+  // Replace og:url — use regex
   html = html.replace(
-    `<meta id="ogUrl" property="og:url" content="https://banglachoti.pages.dev/">`,
+    /<meta\s+id="ogUrl"\s+property="og:url"\s+content="[^"]*"\s*\/?>/,
     `<meta id="ogUrl" property="og:url" content="${canonicalUrl}">`
   );
 
+  // Build new headers — disable Cloudflare cache for story pages so canonical is always fresh
+  const newHeaders = new Headers(originalResp.headers);
+  newHeaders.set("Cache-Control", "no-store");
+
   return new Response(html, {
     status: originalResp.status,
-    headers: originalResp.headers,
+    headers: newHeaders,
   });
 }
 
@@ -68,12 +69,10 @@ function handleRobots(url) {
   const body = `User-agent: *
 Allow: /
 
-# Admin panel crawl করবে না
 Disallow: /admin
 Disallow: /admin/
 Disallow: /*.json$
 
-# Sitemap
 Sitemap: ${origin}/sitemap.xml
 `;
   return new Response(body, {
@@ -130,7 +129,6 @@ async function handleSitemap(context, url) {
           if (!slug || slug === "story" || slug === "admin" || slug === "story.html") continue;
 
           const encodedSlug = slug.split("/").map(encodeURIComponent).join("/");
-
           const lastmod = (story.updatedAt || story.createdAt)
             ? new Date(story.updatedAt || story.createdAt).toISOString().split("T")[0]
             : new Date().toISOString().split("T")[0];
