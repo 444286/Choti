@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
+<script>
+(function(){
+  var p=window.location.pathname.replace(/^\/+|\/+$/g,'');
+  var skip={'':'1','story':'1','story.html':'1','admin':'1'};
+  var url=skip[p]?'https://banglachoti.pages.dev/':'https://banglachoti.pages.dev/'+p.split('/').map(encodeURIComponent).join('/');
+  document.write('<link id="canonicalLink" rel="canonical" href="'+url+'">');
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>বাংলা চটি গল্প | Bangla Choti Kahinii</title>
@@ -10,7 +18,7 @@
 <meta name="author" content="Bangla Choti Kahinii">
 <meta name="language" content="Bengali">
 <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<link id="canonicalLink" rel="canonical" href="">
+
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Bangla Choti Kahinii">
 <meta property="og:locale" content="bn_BD">
