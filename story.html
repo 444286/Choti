@@ -3,9 +3,17 @@
 <head>
 <script>
 (function(){
-  var p=window.location.pathname.replace(/^\/+|\/+$/g,'');
-  var skip={'':'1','story':'1','story.html':'1','admin':'1'};
-  var url=skip[p]?'https://banglachoti.pages.dev/':'https://banglachoti.pages.dev/'+p.split('/').map(encodeURIComponent).join('/');
+  // Worker passes slug via ?slug= param — use it for canonical
+  var params=new URLSearchParams(window.location.search);
+  var slug=params.get('slug')||'';
+  // Also try pathname for direct visits
+  if(!slug){
+    var p=window.location.pathname.replace(/^\/+|\/+$/g,'');
+    if(p&&p!=='story'&&p!=='story.html'&&p!=='admin')slug=p;
+  }
+  var url=slug
+    ?'https://banglachoti.pages.dev/'+slug.split('/').map(encodeURIComponent).join('/')
+    :'https://banglachoti.pages.dev/';
   document.write('<link id="canonicalLink" rel="canonical" href="'+url+'">');
 })();
 </script>
