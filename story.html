@@ -349,6 +349,22 @@ async function loadStory(){
       : '';
 
     app.className='article';
+
+    // ── View count increment ──────────────────────────────────────────
+    // Admin থেকে যে value set করা আছে সেটা base ধরে, তারপর থেকে
+    // প্রতিটা visit-এ +1 করে যাবে। Transaction use করা হয়েছে যাতে
+    // একাধিক user একসাথে visit করলেও count ঠিকমতো বাড়ে।
+    try {
+      await db.ref(`stories/${story._id}/views`).transaction(current => {
+        return (current || 0) + 1;
+      });
+      // Local copy-তেও update করি যাতে page-এ সাথে সাথে নতুন count দেখা যায়
+      story.views = (Number(story.views) || 0) + 1;
+    } catch(e) {
+      console.warn('View count update failed:', e);
+    }
+    // ─────────────────────────────────────────────────────────────────
+
     // Find prev/next part navigation
     const {prev:prevPart, next:nextPart} = await findPrevNext(story);
     const prevHtml = prevPart
