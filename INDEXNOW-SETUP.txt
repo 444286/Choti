@@ -1,0 +1,11 @@
+Bangla Choti Kahinii - IndexNow enabled build
+
+Deploy this ZIP as the main Cloudflare Pages project (the ZIP contents are the project root).
+Includes:
+- functions/[[path]].js with /indexnow-submit endpoint
+- <API_KEY>.txt at the site root for IndexNow verification
+- existing index.html and story.html
+
+The API key is included in the TXT filename and contents. Do not rename the key file.
+The admin ZIP must be deployed separately as before. Admin publishing submits URLs only when story status is "published".
+Current canonical hostname is banglachoti.pages.dev, matching the existing site's SEO code.
