@@ -2,6 +2,11 @@ export async function onRequest(context) {
   const url = new URL(context.request.url);
   const path = url.pathname.replace(/^\/+|\/+$/g, "");
 
+  // ===== INDEXNOW URL SUBMISSION =====
+  if (path === "indexnow-submit") {
+    return handleIndexNowSubmit(context);
+  }
+
   // ===== SITEMAP.XML =====
   if (path === "sitemap.xml") {
     return handleSitemap(context, url);
@@ -182,4 +187,65 @@ function escapeXml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+}
+
+
+// ===== INDEXNOW SUBMISSION ENDPOINT =====
+// This endpoint only submits URLs belonging to this site.
+async function handleIndexNowSubmit(context) {
+  const request = context.request;
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Cache-Control": "no-store",
+    "Content-Type": "application/json; charset=utf-8",
+  };
+
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
+  if (request.method !== "POST") {
+    return new Response(JSON.stringify({ ok: false, error: "POST required" }), { status: 405, headers });
+  }
+
+  let body;
+  try { body = await request.json(); }
+  catch (e) { return new Response(JSON.stringify({ ok: false, error: "Invalid JSON" }), { status: 400, headers }); }
+
+  const rawUrls = Array.isArray(body.urlList) ? body.urlList : (body.url ? [body.url] : []);
+  if (!rawUrls.length || rawUrls.length > 10) {
+    return new Response(JSON.stringify({ ok: false, error: "Send between 1 and 10 URLs" }), { status: 400, headers });
+  }
+
+  const host = "banglachoti.pages.dev";
+  const urlList = [];
+  for (const raw of rawUrls) {
+    let u;
+    try { u = new URL(String(raw)); } catch (e) {
+      return new Response(JSON.stringify({ ok: false, error: "Invalid URL" }), { status: 400, headers });
+    }
+    if (u.protocol !== "https:" || u.hostname !== host || u.username || u.password) {
+      return new Response(JSON.stringify({ ok: false, error: "Only HTTPS URLs on " + host + " are allowed" }), { status: 403, headers });
+    }
+    if (u.pathname === "/admin" || u.pathname.startsWith("/admin/") || /\.(txt|xml|json)$/i.test(u.pathname)) {
+      return new Response(JSON.stringify({ ok: false, error: "This URL type cannot be submitted" }), { status: 400, headers });
+    }
+    urlList.push(u.href);
+  }
+
+  const key = "bd73d30349c63b520fcd33bbdba7ca0e";
+  const keyLocation = `https://${host}/${key}.txt`;
+  try {
+    const response = await fetch("https://api.indexnow.org/indexnow", {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify({ host, key, keyLocation, urlList: [...new Set(urlList)] }),
+    });
+    const responseText = await response.text().catch(() => "");
+    if (response.status === 200 || response.status === 202) {
+      return new Response(JSON.stringify({ ok: true, status: response.status, submitted: [...new Set(urlList)].length }), { status: 200, headers });
+    }
+    return new Response(JSON.stringify({ ok: false, status: response.status, error: responseText.slice(0, 500) || "IndexNow rejected the request" }), { status: 502, headers });
+  } catch (error) {
+    return new Response(JSON.stringify({ ok: false, error: "Could not reach IndexNow service" }), { status: 502, headers });
+  }
 }
