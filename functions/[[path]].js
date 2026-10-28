@@ -17,14 +17,18 @@ export async function onRequest(context) {
     return handleRobots(url);
   }
 
-  // Pass through: homepage, static files, admin, story page itself
-  if (!path || path.includes(".") || path === "admin" || path === "story" || path === "story.html") {
+  // Pass through homepage, static assets, admin and direct story.html file.
+  // IMPORTANT: older routing may send clean story URLs to /story?slug=...
+  // In that case, this function must SSR the query slug instead of returning
+  // the empty client-side loading shell.
+  const querySlug = url.searchParams.get("slug") || "";
+  if (!path || path.includes(".") || path === "admin" || path === "admin/" || (path === "story" && !querySlug)) {
     return context.next();
   }
 
   // ===== STORY PAGE — server-render story HTML for crawlers =====
   let slug;
-  try { slug = decodeURIComponent(path); } catch(e) { slug = path; }
+  try { slug = decodeURIComponent(querySlug || path); } catch(e) { slug = querySlug || path; }
 
   const rewrite = new URL(context.request.url);
   rewrite.pathname = "/story.html";
@@ -37,7 +41,7 @@ export async function onRequest(context) {
   if (!contentType.includes("text/html")) return originalResp;
 
   let html = await originalResp.text();
-  const canonicalUrl = `https://banglachoti.pages.dev/${path.split("/").map(encodeURIComponent).join("/")}`;
+  const canonicalUrl = `https://banglachoti.pages.dev/${slug.split("/").map(encodeURIComponent).join("/")}`;
 
   // Read the published story directly from Firebase on the server, so the initial
   // HTML response already contains the complete article (not only a loading box).
