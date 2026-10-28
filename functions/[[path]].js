@@ -70,7 +70,7 @@ export async function onRequest(context) {
     }
     const storyCats = Array.isArray(found.categories) ? found.categories : [];
     const categoryHtml = storyCats.length
-      ? `<section class="category-end"><div class="category-title">ক্যাটাগরি</div><div class="category-list">${storyCats.map(slug => {
+      ? `<section class="category-end"><div class="category-title">Categories</div><div class="category-list">${storyCats.map(slug => {
           const cat = categoryMap[slug] || { name: slug };
           return `<a class="cat" href="/?category=${encodeURIComponent(slug)}">${escapeHtml(cat.name || slug)}</a>`;
         }).join(', ')}</div></section>` : '';
@@ -96,7 +96,7 @@ export async function onRequest(context) {
     const partsHtml = parts.length
       ? `<section class="series-box"><div class="series-title">📚 এই গল্পের সকল পর্ব</div><ol class="series-list">${parts.map((item, i) => `<li><a href="${storyHref(item)}">${escapeHtml(item.title || `পর্ব ${item.part || i + 1}`)}</a></li>`).join('')}</ol></section>` : '';
     const relatedHtml = relatedItems.length
-      ? `<section class="series-box"><div class="series-title related-title">${parts.length ? '📖 আরও গল্প পড়ুন' : '📖 একই বিভাগের আরও গল্প'}</div><ol class="series-list">${relatedItems.map(item => `<li><a href="${storyHref(item)}">${escapeHtml(item.title || 'গল্প')}</a></li>`).join('')}</ol></section>` : '';
+      ? `<section class="series-box"><div class="series-title related-title">${parts.length ? '📖 আরও গল্প পড়ুন' : '📖 Related Posts'}</div><ol class="series-list">${relatedItems.map(item => `<li><a href="${storyHref(item)}">${escapeHtml(item.title || 'গল্প')}</a></li>`).join('')}</ol></section>` : '';
 
     let prevNextHtml = '';
     const suffixMatch = normalizeSlug(found.postLink || found.customLink || found.manualLink).match(/^(.*)-(\d+)$/);
