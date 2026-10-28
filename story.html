@@ -193,11 +193,19 @@ async function findPrevNext(currentStory){
 }
 
 /* ── Process inline story links: [[story-slug|Story Title]] ──────── */
-function processInlineLinks(html){
-  return html.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g,(match,slug,title)=>{
-    const cleanSlug=slug.trim();
+function processInlineLinks(input){
+  const source=String(input||'')
+    .replace(/&amp;(#0*91;|#x0*5b;|lbrack;)/gi,'&$1')
+    .replace(/&amp;(#0*93;|#x0*5d;|rbrack;)/gi,'&$1')
+    .replace(/&amp;(#0*124;|#x0*7c;|vert;|verbar;)/gi,'&$1')
+    .replace(/&#0*91;|&#x0*5b;|&lbrack;/gi,'[')
+    .replace(/&#0*93;|&#x0*5d;|&rbrack;/gi,']')
+    .replace(/&#0*124;|&#x0*7c;|&vert;|&verbar;/gi,'|');
+  return source.replace(/\[\[\s*([^\]|]+?)\s*\|\s*([^\]]+?)\s*\]\]/g,(match,slug,title)=>{
+    const cleanSlug=slug.trim().replace(/^\/+|\/+$/g,'');
     const cleanTitle=title.trim();
-    const href='/'+encodeURIComponent(cleanSlug);
+    if(!cleanSlug||!cleanTitle)return match;
+    const href='/'+cleanSlug.split('/').filter(Boolean).map(part=>encodeURIComponent(part)).join('/');
     return `<a class="inline-story-link" href="${href}">📖 ${escapeHTML(cleanTitle)}</a>`;
   });
 }
