@@ -58,7 +58,7 @@ export async function onRequest(context) {
     const date = found.createdAt ? new Date(found.createdAt).toLocaleDateString("bn-BD") : "";
     const author = escapeHtml(found.author || "অজ্ঞাত");
     const views = Number(found.views) || 0;
-    const content = sanitizeStoryContent(found.content || "");
+    const content = processInlineStoryLinks(sanitizeStoryContent(found.content || ""));
 
     // Render the same supporting sections server-side too. Client-side loadStory()
     // is intentionally skipped for SSR pages, so these must be in the first HTML.
@@ -191,6 +191,18 @@ function stripHtml(v) {
     .replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]*>/g, " ")
     .replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim();
 }
+// Convert the editor's [[story-slug|Story Title]] syntax into clickable links
+// during SSR too, because the client-side story loader is skipped on rendered pages.
+function processInlineStoryLinks(html) {
+  return String(html || "").replace(/\\[\\[([^\\]|]+)\\|([^\\]]+)\\]\\]/g, (match, slug, title) => {
+    const cleanSlug = String(slug || "").trim().replace(/^\\/+|\\/+$/g, "");
+    const cleanTitle = String(title || "").trim();
+    if (!cleanSlug || !cleanTitle) return match;
+    const href = "/" + cleanSlug.split("/").map(part => encodeURIComponent(part)).join("/");
+    return `<a class="inline-story-link" href="${href}">📖 ${escapeHtml(cleanTitle)}</a>`;
+  });
+}
+
 // Story content is intentionally HTML from the editor; remove executable/unsafe embeds
 // while retaining common formatting, paragraphs, links and images.
 function sanitizeStoryContent(v) {
