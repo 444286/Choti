@@ -59,7 +59,57 @@ export async function onRequest(context) {
     const author = escapeHtml(found.author || "অজ্ঞাত");
     const views = Number(found.views) || 0;
     const content = sanitizeStoryContent(found.content || "");
-    const storyHtml = `<div class="head"><h1 class="title">${safeTitle}</h1><div class="meta"><span>👤 ${author}</span>${date ? `<span>📅 ${escapeHtml(date)}</span>` : ""}<span>👁 ${views.toLocaleString("bn-BD")}</span></div></div><article class="content">${content}</article>`;
+
+    // Render the same supporting sections server-side too. Client-side loadStory()
+    // is intentionally skipped for SSR pages, so these must be in the first HTML.
+    const categoriesResp = await fetch(`${FIREBASE_URL}/categories.json`).catch(() => null);
+    const categoriesData = categoriesResp && categoriesResp.ok ? await categoriesResp.json() : {};
+    const categoryMap = {};
+    for (const [cid, cat] of Object.entries(categoriesData || {})) {
+      if (cat && cat.slug) categoryMap[cat.slug] = cat;
+    }
+    const storyCats = Array.isArray(found.categories) ? found.categories : [];
+    const categoryHtml = storyCats.length
+      ? `<section class="category-end"><div class="category-title">ক্যাটাগরি</div><div class="category-list">${storyCats.map(slug => {
+          const cat = categoryMap[slug] || { name: slug };
+          return `<a class="cat" href="/?category=${encodeURIComponent(slug)}">${escapeHtml(cat.name || slug)}</a>`;
+        }).join(', ')}</div></section>` : '';
+
+    const linksResp = await fetch(`${FIREBASE_URL}/stories/${encodeURIComponent(found._id)}/links.json`).catch(() => null);
+    const linksData = linksResp && linksResp.ok ? (await linksResp.json() || {}) : {};
+    const parts = linksData.series && Array.isArray(linksData.series.parts) ? linksData.series.parts : [];
+    const storyHref = item => {
+      let value = String(item && (item.postLink || item.customLink || item.manualLink) || '').trim();
+      if (/^https?:\/\//i.test(value)) { try { value = new URL(value).pathname; } catch {} }
+      value = decodeSafe(value).replace(/^\/+|\/+$/g, '');
+      return value ? '/' + value.split('/').map(encodeURIComponent).join('/') : '#';
+    };
+    let relatedItems = [];
+    if (parts.length < 5) {
+      relatedItems = Object.entries(all || {}).map(([id, item]) => ({ ...item, _id: item && item._id || id }))
+        .filter(item => item && item._id !== found._id && item.status !== 'draft' &&
+          (item.postLink || item.customLink || item.manualLink) &&
+          Array.isArray(item.categories) && storyCats.some(cat => item.categories.includes(cat)))
+        .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+        .slice(0, Math.max(0, 5 - parts.length));
+    }
+    const partsHtml = parts.length
+      ? `<section class="series-box"><div class="series-title">📚 এই গল্পের সকল পর্ব</div><ol class="series-list">${parts.map((item, i) => `<li><a href="${storyHref(item)}">${escapeHtml(item.title || `পর্ব ${item.part || i + 1}`)}</a></li>`).join('')}</ol></section>` : '';
+    const relatedHtml = relatedItems.length
+      ? `<section class="series-box"><div class="series-title related-title">${parts.length ? '📖 আরও গল্প পড়ুন' : '📖 একই বিভাগের আরও গল্প'}</div><ol class="series-list">${relatedItems.map(item => `<li><a href="${storyHref(item)}">${escapeHtml(item.title || 'গল্প')}</a></li>`).join('')}</ol></section>` : '';
+
+    let prevNextHtml = '';
+    const suffixMatch = normalizeSlug(found.postLink || found.customLink || found.manualLink).match(/^(.*)-(\d+)$/);
+    if (suffixMatch) {
+      const base = suffixMatch[1], num = Number(suffixMatch[2]);
+      const findPart = target => Object.entries(all || {}).map(([id, item]) => ({ ...item, _id: item && item._id || id }))
+        .find(item => item && item.status !== 'draft' &&
+          [item.postLink, item.customLink, item.manualLink].some(link => normalizeSlug(link) === `${base}-${target}`));
+      const prev = num > 1 ? findPart(num - 1) : null;
+      const next = findPart(num + 1);
+      if (prev || next) prevNextHtml = `<div class="porbo-nav">${prev ? `<a href="${storyHref(prev)}">← আগের পর্ব</a>` : ''}<div class="spacer"></div>${next ? `<a href="${storyHref(next)}">পরের পর্ব →</a>` : ''}</div>`;
+    }
+    const storyHtml = `<div class="head"><h1 class="title">${safeTitle}</h1><div class="meta"><span>👤 ${author}</span>${date ? `<span>📅 ${escapeHtml(date)}</span>` : ""}<span>👁 ${views.toLocaleString("bn-BD")}</span></div></div>${prevNextHtml}<article class="content">${content}</article>${prevNextHtml}${partsHtml}${relatedHtml}${categoryHtml}`;
 
     // Remove the client-side document.write canonical generator to avoid duplicate canonicals.
     html = html.replace(/<script>\s*\(function\(\)\{\s*\/\/ Worker passes slug[\s\S]*?<\/script>/i, "");
