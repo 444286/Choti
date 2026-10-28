@@ -22,7 +22,7 @@ export async function onRequest(context) {
     return context.next();
   }
 
-  // ===== STORY PAGE — server-side canonical injection =====
+  // ===== STORY PAGE — server-render story HTML for crawlers =====
   let slug;
   try { slug = decodeURIComponent(path); } catch(e) { slug = path; }
 
@@ -33,39 +33,70 @@ export async function onRequest(context) {
   const originalResp = await context.env.ASSETS.fetch(
     new Request(rewrite.toString(), context.request)
   );
-
   const contentType = originalResp.headers.get("content-type") || "";
-  if (!contentType.includes("text/html")) {
-    return originalResp;
-  }
-
-  // Build the correct canonical URL for this story
-  const canonicalUrl = `https://banglachoti.pages.dev/${path
-    .split("/")
-    .map(encodeURIComponent)
-    .join("/")}`;
+  if (!contentType.includes("text/html")) return originalResp;
 
   let html = await originalResp.text();
+  const canonicalUrl = `https://banglachoti.pages.dev/${path.split("/").map(encodeURIComponent).join("/")}`;
 
-  // Inject canonical — replace the empty href="" with correct URL
-  html = html.replace(
-    '<link id="canonicalLink" rel="canonical" href="">',
-    `<link id="canonicalLink" rel="canonical" href="${canonicalUrl}">`
-  );
+  // Read the published story directly from Firebase on the server, so the initial
+  // HTML response already contains the complete article (not only a loading box).
+  try {
+    const fb = await fetch("https://jobs-33e35-default-rtdb.asia-southeast1.firebasedatabase.app/stories.json");
+    if (fb.ok) {
+      const all = await fb.json();
+      const normalize = value => {
+        let v = String(value || "").trim();
+        if (/^https?:\/\//i.test(v)) { try { v = new URL(v).pathname; } catch(e) {} }
+        try { v = decodeURIComponent(v); } catch(e) {}
+        return v.replace(/^\/+|\/+$/g, "").split("/").pop() || "";
+      };
+      const wanted = normalize(slug);
+      let story = null;
+      if (all && typeof all === "object") {
+        for (const [id, item] of Object.entries(all)) {
+          if (!item || item.status === "draft") continue;
+          const links = [item.postLink, item.customLink, item.manualLink].map(normalize);
+          if (links.includes(wanted)) { story = { ...item, _id: item._id || id }; break; }
+        }
+      }
+      if (story) {
+        const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+        const title = String(story.title || "বাংলা গল্প").trim();
+        const plain = String(story.excerpt || String(story.content || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160) || `${title} গল্পটি পড়ুন।`).trim();
+        const date = story.createdAt ? new Date(story.createdAt).toLocaleDateString("bn-BD", { timeZone: "Asia/Dhaka" }) : "";
+        const image = story.image ? new URL(story.image, "https://banglachoti.pages.dev/").href : "";
+        const articleHtml = `<div class="article"><div class="head"><h1 class="title">${esc(title)}</h1><div class="meta"><span>👤 ${esc(story.author || "অজ্ঞাত")}</span>${date ? `<span>📅 ${esc(date)}</span>` : ""}<span>👁 ${Number(story.views || 0).toLocaleString("bn-BD")}</span></div></div>${image ? `<img class="cover" src="${esc(image)}" alt="${esc(title)}">` : ""}<article class="content">${String(story.content || "")}</article></div>`;
+        html = html.replace(/<div id="app"[^>]*>[\s\S]*?<\/div>/i, articleHtml);
+        html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${esc(title)} | Bangla Choti Kahinii</title>`);
+        html = html.replace(/<meta name="description" content="[^"]*">/i, `<meta name="description" content="${esc(plain)}">`);
+        html = html.replace(/<meta id="ogTitle"[^>]*>/i, `<meta id="ogTitle" property="og:title" content="${esc(title)} | Bangla Choti Kahinii">`);
+        html = html.replace(/<meta id="ogDescription"[^>]*>/i, `<meta id="ogDescription" property="og:description" content="${esc(plain)}">`);
+        html = html.replace(/<meta id="ogUrl"[^>]*>/i, `<meta id="ogUrl" property="og:url" content="${canonicalUrl}">`);
+        html = html.replace(/<meta id="twitterTitle"[^>]*>/i, `<meta id="twitterTitle" name="twitter:title" content="${esc(title)} | Bangla Choti Kahinii">`);
+        html = html.replace(/<meta id="twitterDescription"[^>]*>/i, `<meta id="twitterDescription" name="twitter:description" content="${esc(plain)}">`);
+        if (image) {
+          html = html.replace(/<meta id="ogImage"[^>]*>/i, `<meta id="ogImage" property="og:image" content="${esc(image)}">`);
+          html = html.replace(/<meta id="twitterImage"[^>]*>/i, `<meta id="twitterImage" name="twitter:image" content="${esc(image)}">`);
+        }
+        const schema = {"@context":"https://schema.org","@type":"Article","headline":title,"description":plain,"url":canonicalUrl,"inLanguage":"bn-BD","author":{"@type":"Person","name":story.author || "Bangla Choti Kahinii"},"datePublished":story.createdAt ? new Date(story.createdAt).toISOString() : undefined,"image":image || undefined,"articleBody":String(story.content || "").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim()};
+        html = html.replace(/<script data-server-story-schema>[\s\S]*?<\/script>/i, "");
+        html = html.replace(/<\/head>/i, `<script type="application/ld+json" data-server-story-schema>${JSON.stringify(schema).replace(/</g,"\\u003c")}</script></head>`);
+      }
+    }
+  } catch (err) {
+    // Keep the client-side Firebase renderer as a fallback if server rendering fails.
+    console.error("Story SSR failed:", err);
+  }
 
-  // Inject og:url — replace the empty content="" with correct URL  
-  html = html.replace(
-    '<meta id="ogUrl" property="og:url" content="">',
-    `<meta id="ogUrl" property="og:url" content="${canonicalUrl}">`
-  );
+  // Keep exactly one canonical tag in the response (avoid duplicate canonicals).
+  html = html.replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, "");
+  html = html.replace(/<\/head>/i, `<link id="canonicalLink" rel="canonical" href="${canonicalUrl}"></head>`);
+  html = html.replace(/<meta id="ogUrl"[^>]*>/i, `<meta id="ogUrl" property="og:url" content="${canonicalUrl}">`);
 
   const newHeaders = new Headers(originalResp.headers);
-  newHeaders.set("Cache-Control", "no-store");
-
-  return new Response(html, {
-    status: originalResp.status,
-    headers: newHeaders,
-  });
+  newHeaders.set("Cache-Control", "public, max-age=60, s-maxage=300");
+  return new Response(html, { status: originalResp.status, headers: newHeaders });
 }
 
 // ===== ROBOTS.TXT =====
