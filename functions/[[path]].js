@@ -193,12 +193,21 @@ function stripHtml(v) {
 }
 // Convert the editor's [[story-slug|Story Title]] syntax into clickable links
 // during SSR too, because the client-side story loader is skipped on rendered pages.
-function processInlineStoryLinks(html) {
-  return String(html || "").replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (match, slug, title) => {
-    const cleanSlug = String(slug || "").trim().replace(/^\\/+|\\/+$/g, "");
+function processInlineStoryLinks(input) {
+  // Admin rich-text editors sometimes save brackets/pipes as HTML entities.
+  // Normalize only these delimiter entities before parsing the custom syntax.
+  const source = String(input || "")
+    .replace(/&amp;(#0*91;|#x0*5b;|lbrack;)/gi, "&$1")
+    .replace(/&amp;(#0*93;|#x0*5d;|rbrack;)/gi, "&$1")
+    .replace(/&amp;(#0*124;|#x0*7c;|vert;|verbar;)/gi, "&$1")
+    .replace(/&#0*91;|&#x0*5b;|&lbrack;/gi, "[")
+    .replace(/&#0*93;|&#x0*5d;|&rbrack;/gi, "]")
+    .replace(/&#0*124;|&#x0*7c;|&vert;|&verbar;/gi, "|");
+  return source.replace(/\[\[\s*([^\]|]+?)\s*\|\s*([^\]]+?)\s*\]\]/g, (match, slug, title) => {
+    const cleanSlug = String(slug || "").trim().replace(/^\/+|\/+$/g, "");
     const cleanTitle = String(title || "").trim();
     if (!cleanSlug || !cleanTitle) return match;
-    const href = "/" + cleanSlug.split("/").map(part => encodeURIComponent(part)).join("/");
+    const href = "/" + cleanSlug.split("/").filter(Boolean).map(part => encodeURIComponent(part)).join("/");
     return `<a class="inline-story-link" href="${href}">📖 ${escapeHtml(cleanTitle)}</a>`;
   });
 }
