@@ -348,12 +348,12 @@ async function loadStory(){
       const fillItems = catFillPosts.map(item=>
         `<li><a href="${storyLink(item)}">${escapeHTML(item.title||'গল্প')}</a></li>`
       ).join('');
-      const fillTitle = hasParts ? '📖 আরও গল্প পড়ুন' : '📖 একই বিভাগের আরও গল্প';
+      const fillTitle = hasParts ? '📖 আরও গল্প পড়ুন' : '📖 Related Posts';
       linksHtml += `<section class="series-box"><div class="series-title related-title">${fillTitle}</div><ol class="series-list">${fillItems}</ol></section>`;
     }
 
     const categoryHtml = catHtml
-      ? `<section class="category-end"><div class="category-title">ক্যাটাগরি</div><div class="category-list">${catHtml}</div></section>`
+      ? `<section class="category-end"><div class="category-title">Categories</div><div class="category-list">${catHtml}</div></section>`
       : '';
 
     app.className='article';
