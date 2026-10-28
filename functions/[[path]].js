@@ -194,7 +194,7 @@ function stripHtml(v) {
 // Convert the editor's [[story-slug|Story Title]] syntax into clickable links
 // during SSR too, because the client-side story loader is skipped on rendered pages.
 function processInlineStoryLinks(html) {
-  return String(html || "").replace(/\\[\\[([^\\]|]+)\\|([^\\]]+)\\]\\]/g, (match, slug, title) => {
+  return String(html || "").replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (match, slug, title) => {
     const cleanSlug = String(slug || "").trim().replace(/^\\/+|\\/+$/g, "");
     const cleanTitle = String(title || "").trim();
     if (!cleanSlug || !cleanTitle) return match;
