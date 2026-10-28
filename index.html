@@ -960,7 +960,7 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
       let all=Object.entries(snap.val()||{}).map(([id,s])=>({...s,_id:s._id||id})).filter(s=>s.status==='published');
       if(cat) all=all.filter(s=>(s.categories||[]).includes(cat));
       if(search){const q=search.toLowerCase();all=all.filter(s=>String(s.title||'').toLowerCase().includes(q)||String(s.content||'').toLowerCase().includes(q)||String(s.author||'').toLowerCase().includes(q));}
-      all.sort((a,b)=>Number(b.createdOrder||new Date(b.createdAt||0).getTime())-Number(a.createdOrder||new Date(a.createdAt||0).getTime()));
+      all.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
       const total=all.length; totalPages=Math.max(1,Math.ceil(total/15));
       renderStories(all.slice((page-1)*15,page*15)); renderPagination(page,totalPages,total);
     } catch(err){console.error(err);section.innerHTML='<div class="loading-spinner">⚠️ Firebase থেকে গল্প লোড করা যায়নি। Database Rules পরীক্ষা করুন।</div>';}
