@@ -580,6 +580,10 @@
       cursor: pointer;
       transition: all 0.2s;
       font-family: 'Hind Siliguri', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
     }
     .page-btn:hover { border-color: var(--green-main); background: #d0f0e0; }
     .page-btn.active { background: var(--green-main); color: #fff; border-color: var(--green-main); }
@@ -599,7 +603,12 @@
       cursor: pointer;
       transition: all 0.2s;
       font-family: 'Hind Siliguri', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
     }
+    .page-prev.disabled, .page-next.disabled { opacity: 0.35; cursor: default; }
     .page-prev:hover, .page-next:hover { background: #d0f0e0; border-color: var(--green-main); }
     .page-prev:disabled, .page-next:disabled { opacity: 0.35; cursor: default; }
     .page-dots { color: var(--text-light); font-size: 18px; display:flex; align-items:center; padding: 0 4px; }
@@ -1082,17 +1091,24 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
       pages.push(totalPages);
     }
 
+    const pageHref = targetPage => {
+      const url = new URL(window.location.href);
+      if (currentCat) url.searchParams.set('category', currentCat); else url.searchParams.delete('category');
+      if (currentSearch) url.searchParams.set('search', currentSearch); else url.searchParams.delete('search');
+      if (targetPage > 1) url.searchParams.set('page', String(targetPage)); else url.searchParams.delete('page');
+      return url.pathname + url.search;
+    };
     const numBtns = pages.map(p =>
       p === '...'
         ? `<span class="page-dots">...</span>`
-        : `<button class="page-btn ${p === page ? 'active' : ''}" onclick="changePage(${p})">${p}</button>`
+        : `<a class="page-btn ${p === page ? 'active' : ''}" href="${pageHref(p)}"${p === page ? ' aria-current="page"' : ''}>${p}</a>`
     ).join('');
 
     wrap.innerHTML = `
       <div class="pagination-nums">${numBtns}</div>
       <div class="pagination-nav">
-        <button class="page-prev" onclick="changePage(${Math.max(1, page-1)})" ${page === 1 ? 'disabled' : ''}>← Previous</button>
-        <button class="page-next" onclick="changePage(${Math.min(totalPages, page+1)})" ${page === totalPages ? 'disabled' : ''}>Next →</button>
+        ${page === 1 ? '<span class="page-prev disabled" aria-disabled="true">← Previous</span>' : `<a class="page-prev" href="${pageHref(page-1)}">← Previous</a>`}
+        ${page === totalPages ? '<span class="page-next disabled" aria-disabled="true">Next →</span>' : `<a class="page-next" href="${pageHref(page+1)}">Next →</a>`}
       </div>
     `;
   }
