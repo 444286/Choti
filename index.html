@@ -768,7 +768,7 @@
 .hero {
   display: none !important;
 }
-</style>
+.story-title a{color:inherit;text-decoration:none}.story-title a:hover{text-decoration:underline}</style>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -1395,7 +1395,7 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
   const initialSearchInput = document.getElementById('searchInput');
   if (initialSearchInput) initialSearchInput.value = initialSearch;
   setActiveCategoryButton(initialCategory);
-  loadCategories().finally(() => loadStories(initialPage, initialCategory, initialSearch));
+  loadCategories().finally(() => { if (!window.__SSR_HOME_RENDERED__) loadStories(initialPage, initialCategory, initialSearch); });
 </script>
 </body>
   </html>
