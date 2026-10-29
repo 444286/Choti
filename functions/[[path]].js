@@ -92,8 +92,8 @@ export async function onRequest(context) {
       html = html.replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, "");
       html = html.replace("</head>", `<link id="canonicalLink" rel="canonical" href="${escapeHtml(canonical)}">\n</head>`);
       html = html.replace(/<meta property=["']og:url["'] content=["'][^"']*["']\s*\/?>/i, `<meta property="og:url" content="${escapeHtml(canonical)}">`);
-      html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${requestedCategory && categoryMap[requestedCategory] ? escapeHtml(categoryMap[requestedCategory].name || requestedCategory) + " | " : ""}Bangla Choti Kahinii - বাংলা চটি গল্পের সবচেয়ে বড় ঠিকানা${page > 1 ? " - Page " + page : ""}</title>`);
-      html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/i, `<meta name="description" content="বাংলা চটি গল্প, বাংলা গল্প ও বিভিন্ন ধরনের বাংলা গল্প পড়ুন Bangla Choti Kahinii-তে। নতুন গল্প, জনপ্রিয় গল্প ও বিভিন্ন বিভাগের গল্প এক জায়গায় পড়ুন.">`);
+      html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${requestedCategory && categoryMap[requestedCategory] ? escapeHtml(categoryMap[requestedCategory].name || requestedCategory) + " | " : ""}Bangla Choti Kahinii - New Bangla Choti Golpo & Bangla Choti Kahini${page > 1 ? " - Page " + page : ""}</title>`);
+      html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/i, `<meta name="description" content="Bangla Choti Kahinii-তে নতুন বাংলা চটি গল্প ও বাংলা কাহিনি খুঁজুন। নতুন প্রকাশিত গল্প, জনপ্রিয় গল্প এবং বিভিন্ন বিভাগের গল্প এক জায়গায় ব্রাউজ করুন।">`);
 
       // Replace the template's hard-coded homepage WebPage/Breadcrumb schema with
       // data for the actual homepage variant (category and pagination included).
@@ -177,10 +177,14 @@ export async function onRequest(context) {
     let html = await assetResp.text();
 
     const title = String(found.title || "বাংলা গল্প").trim();
+    const seoTitle = /bangla choti golpo|bangla choti kahinii/i.test(title)
+      ? title
+      : `${title} - Bangla Choti Golpo | Bangla Choti Kahinii`;
     const description = String(found.excerpt || stripHtml(found.content).slice(0, 160) ||
       `${title} গল্পটি Bangla Choti Kahinii-তে পড়ুন।`).trim();
     const canonical = `${SITE_ORIGIN}/${wanted.split("/").map(encodeURIComponent).join("/")}`;
     const safeTitle = escapeHtml(title);
+    const safeSeoTitle = escapeHtml(seoTitle);
     const safeDescription = escapeHtml(description);
     const date = found.createdAt ? new Date(found.createdAt).toLocaleDateString("bn-BD") : "";
     const author = escapeHtml(found.author || "অজ্ঞাত");
@@ -242,17 +246,17 @@ export async function onRequest(context) {
     html = html.replace(/<script>\s*\(function\(\)\{\s*\/\/ Worker passes slug[\s\S]*?<\/script>/i, "");
     html = html.replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, "");
     html = html.replace("</head>", `<link id="canonicalLink" rel="canonical" href="${canonical}">\n</head>`);
-    html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${safeTitle} | Bangla Choti Kahinii</title>`);
+    html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${safeSeoTitle}</title>`);
     html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/i,
       `<meta name="description" content="${safeDescription}">`);
     html = html.replace(/<meta id="ogTitle" property="og:title" content="[^"]*"\s*\/?>/i,
-      `<meta id="ogTitle" property="og:title" content="${safeTitle}">`);
+      `<meta id="ogTitle" property="og:title" content="${safeSeoTitle}">`);
     html = html.replace(/<meta id="ogDescription" property="og:description" content="[^"]*"\s*\/?>/i,
       `<meta id="ogDescription" property="og:description" content="${safeDescription}">`);
     html = html.replace(/<meta id="ogUrl" property="og:url" content="[^"]*"\s*\/?>/i,
       `<meta id="ogUrl" property="og:url" content="${canonical}">`);
     html = html.replace(/<meta id="twitterTitle" name="twitter:title" content="[^"]*"\s*\/?>/i,
-      `<meta id="twitterTitle" name="twitter:title" content="${safeTitle}">`);
+      `<meta id="twitterTitle" name="twitter:title" content="${safeSeoTitle}">`);
     html = html.replace(/<meta id="twitterDescription" name="twitter:description" content="[^"]*"\s*\/?>/i,
       `<meta id="twitterDescription" name="twitter:description" content="${safeDescription}">`);
 
