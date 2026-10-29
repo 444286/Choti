@@ -94,6 +94,46 @@ export async function onRequest(context) {
       html = html.replace(/<meta property=["']og:url["'] content=["'][^"']*["']\s*\/?>/i, `<meta property="og:url" content="${escapeHtml(canonical)}">`);
       html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${requestedCategory && categoryMap[requestedCategory] ? escapeHtml(categoryMap[requestedCategory].name || requestedCategory) + " | " : ""}Bangla Choti Kahinii - বাংলা চটি গল্পের সবচেয়ে বড় ঠিকানা${page > 1 ? " - Page " + page : ""}</title>`);
       html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/i, `<meta name="description" content="বাংলা চটি গল্প, বাংলা গল্প ও বিভিন্ন ধরনের বাংলা গল্প পড়ুন Bangla Choti Kahinii-তে। নতুন গল্প, জনপ্রিয় গল্প ও বিভিন্ন বিভাগের গল্প এক জায়গায় পড়ুন.">`);
+
+      // Replace the template's hard-coded homepage WebPage/Breadcrumb schema with
+      // data for the actual homepage variant (category and pagination included).
+      const categoryName = requestedCategory && categoryMap[requestedCategory]
+        ? String(categoryMap[requestedCategory].name || requestedCategory)
+        : requestedCategory;
+      const breadcrumbItems = [{
+        "@type": "ListItem", "position": 1, "name": "হোম", "item": SITE_ORIGIN + "/"
+      }];
+      if (requestedCategory) {
+        const categoryParams = new URLSearchParams();
+        categoryParams.set("category", requestedCategory);
+        breadcrumbItems.push({
+          "@type": "ListItem", "position": 2, "name": categoryName,
+          "item": SITE_ORIGIN + "/?" + categoryParams.toString()
+        });
+      }
+      if (page > 1) {
+        breadcrumbItems.push({
+          "@type": "ListItem", "position": breadcrumbItems.length + 1,
+          "name": "পৃষ্ঠা " + page, "item": canonical
+        });
+      }
+      html = html.replace(/<script\b(?=[^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi,
+        (full, jsonText) => {
+          try {
+            const data = JSON.parse(jsonText);
+            const nodes = Array.isArray(data["@graph"]) ? data["@graph"] : [data];
+            for (const node of nodes) {
+              if (node && (node["@type"] === "WebPage" || (Array.isArray(node["@type"]) && node["@type"].includes("WebPage")))) {
+                node["@id"] = canonical + "#webpage";
+                node.url = canonical;
+                node.name = (categoryName ? categoryName + " | " : "") + "Bangla Choti Kahinii - বাংলা চটি গল্পের সবচেয়ে বড় ঠিকানা" + (page > 1 ? " - পৃষ্ঠা " + page : "");
+                node.description = "বাংলা চটি গল্প, বাংলা গল্প ও বিভিন্ন ধরনের বাংলা গল্প পড়ুন Bangla Choti Kahinii-তে।";
+                node.breadcrumb = { "@type": "BreadcrumbList", "itemListElement": breadcrumbItems };
+              }
+            }
+            return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
+          } catch (_) { return full; }
+        });
       return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=30, s-maxage=120", "X-Content-Type-Options": "nosniff" } });
     } catch (err) {
       console.error("SSR homepage render failed:", err);
