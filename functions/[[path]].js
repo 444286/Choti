@@ -83,9 +83,17 @@ export async function onRequest(context) {
       // Keep the SSR cards visible on first paint; client-side interactions still work.
       html = html.replace(/<script>\s*const firebaseConfig/, "<script>\nwindow.__SSR_HOME_RENDERED__ = true;\nconst firebaseConfig");
       html = html.replace("loadCategories().finally(() => loadStories(initialPage, initialCategory, initialSearch));", "loadCategories().finally(() => { if (!window.__SSR_HOME_RENDERED__) loadStories(initialPage, initialCategory, initialSearch); });");
-      const canonical = SITE_ORIGIN + "/";
-      html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>Bangla Choti Kahinii - বাংলা চটি গল্পের সবচেয়ে বড় ঠিকানা</title>`);
-      html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/i, `<meta name="description" content="বাংলা চটি গল্প, বাংলা গল্প ও বিভিন্ন ধরনের বাংলা গল্প পড়ুন Bangla Choti Kahinii-তে। নতুন গল্প, জনপ্রিয় গল্প ও বিভিন্ন বিভাগের গল্প এক জায়গায় পড়ুন।">`);
+      // Canonicalize homepage variants consistently: keep meaningful category and
+      // pagination parameters, but do not canonicalize internal search queries.
+      const canonicalParams = new URLSearchParams();
+      if (requestedCategory) canonicalParams.set("category", requestedCategory);
+      if (page > 1) canonicalParams.set("page", String(page));
+      const canonical = SITE_ORIGIN + "/" + (canonicalParams.toString() ? "?" + canonicalParams.toString() : "");
+      html = html.replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, "");
+      html = html.replace("</head>", `<link id="canonicalLink" rel="canonical" href="${escapeHtml(canonical)}">\n</head>`);
+      html = html.replace(/<meta property=["']og:url["'] content=["'][^"']*["']\s*\/?>/i, `<meta property="og:url" content="${escapeHtml(canonical)}">`);
+      html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${requestedCategory && categoryMap[requestedCategory] ? escapeHtml(categoryMap[requestedCategory].name || requestedCategory) + " | " : ""}Bangla Choti Kahinii - বাংলা চটি গল্পের সবচেয়ে বড় ঠিকানা${page > 1 ? " - Page " + page : ""}</title>`);
+      html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/i, `<meta name="description" content="বাংলা চটি গল্প, বাংলা গল্প ও বিভিন্ন ধরনের বাংলা গল্প পড়ুন Bangla Choti Kahinii-তে। নতুন গল্প, জনপ্রিয় গল্প ও বিভিন্ন বিভাগের গল্প এক জায়গায় পড়ুন.">`);
       return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=30, s-maxage=120", "X-Content-Type-Options": "nosniff" } });
     } catch (err) {
       console.error("SSR homepage render failed:", err);
