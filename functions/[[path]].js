@@ -32,7 +32,7 @@ export async function onRequest(context) {
       const params = url.searchParams;
       const requestedCategory = params.get("category") || "";
       const requestedSearch = (params.get("search") || "").trim();
-      const page = Math.max(1, parseInt(params.get("page") || "1", 10) || 1);
+      const requestedPage = Math.max(1, parseInt(params.get("page") || "1", 10) || 1);
       let stories = Object.entries(rawStories || {}).map(([id, s]) => ({ ...(s || {}), _id: (s && s._id) || id }))
         .filter(s => s && s.status === "published" && (s.postLink || s.customLink || s.manualLink));
       if (requestedCategory) stories = stories.filter(s => Array.isArray(s.categories) && s.categories.includes(requestedCategory));
@@ -43,6 +43,7 @@ export async function onRequest(context) {
       stories.sort((a, b) => Number(b.createdOrder || new Date(b.createdAt || 0).getTime()) - Number(a.createdOrder || new Date(a.createdAt || 0).getTime()));
       const total = stories.length;
       const totalPages = Math.max(1, Math.ceil(total / 15));
+      const page = Math.min(requestedPage, totalPages);
       const pageStories = stories.slice((page - 1) * 15, page * 15);
       const storyHref = item => {
         let value = String(item.postLink || item.customLink || item.manualLink || "").trim();
@@ -64,7 +65,14 @@ export async function onRequest(context) {
       let pages = [];
       if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
       else { const left = Math.max(2, page - 1), right = Math.min(totalPages - 1, page + 1); pages.push(1); if (left > 2) pages.push("..."); for (let i = left; i <= right; i++) pages.push(i); if (right < totalPages - 1) pages.push("..."); pages.push(totalPages); }
-      const paginationHtml = totalPages <= 1 ? "" : `<div class="pagination-nums">${pages.map(p => p === "..." ? `<span class="page-dots">...</span>` : `<button class="page-btn ${p === page ? "active" : ""}" onclick="changePage(${p})">${p}</button>`).join("")}</div><div class="pagination-nav"><button class="page-prev" onclick="changePage(${Math.max(1,page-1)})" ${page === 1 ? "disabled" : ""}>← Previous</button><button class="page-next" onclick="changePage(${Math.min(totalPages,page+1)})" ${page === totalPages ? "disabled" : ""}>Next →</button></div>`;
+      const pageHref = targetPage => {
+        const nextUrl = new URL(url);
+        if (requestedCategory) nextUrl.searchParams.set("category", requestedCategory); else nextUrl.searchParams.delete("category");
+        if (requestedSearch) nextUrl.searchParams.set("search", requestedSearch); else nextUrl.searchParams.delete("search");
+        if (targetPage > 1) nextUrl.searchParams.set("page", String(targetPage)); else nextUrl.searchParams.delete("page");
+        return nextUrl.pathname + nextUrl.search;
+      };
+      const paginationHtml = totalPages <= 1 ? "" : `<div class="pagination-nums">${pages.map(p => p === "..." ? `<span class="page-dots">...</span>` : `<a class="page-btn ${p === page ? "active" : ""}" href="${pageHref(p)}"${p === page ? ' aria-current="page"' : ""}>${p}</a>`).join("")}</div><div class="pagination-nav">${page === 1 ? `<span class="page-prev disabled" aria-disabled="true">← Previous</span>` : `<a class="page-prev" href="${pageHref(page-1)}">← Previous</a>`}${page === totalPages ? `<span class="page-next disabled" aria-disabled="true">Next →</span>` : `<a class="page-next" href="${pageHref(page+1)}">Next →</a>`}</div>`;
       const filterHtml = `<button class="filter-tag${!requestedCategory ? " active" : ""}" onclick="filterCat('',this)">📚 সব গল্প</button>` + categories.filter(c => c && c.slug).map(c => `<button class="filter-tag${requestedCategory === String(c.slug) ? " active" : ""}" data-category="${escapeHtml(c.slug)}" onclick="filterCat(decodeURIComponent('${encodeURIComponent(String(c.slug))}'),this)">${escapeHtml(c.icon || "📖")} ${escapeHtml(c.name || c.slug)}</button>`).join("");
       const assetResp = await context.env.ASSETS.fetch(new Request(new URL("/", url), { headers: { "Accept": "text/html" } }));
       if (!assetResp.ok) return assetResp;
