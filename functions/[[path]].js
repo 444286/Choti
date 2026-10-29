@@ -92,8 +92,14 @@ export async function onRequest(context) {
       html = html.replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, "");
       html = html.replace("</head>", `<link id="canonicalLink" rel="canonical" href="${escapeHtml(canonical)}">\n</head>`);
       html = html.replace(/<meta property=["']og:url["'] content=["'][^"']*["']\s*\/?>/i, `<meta property="og:url" content="${escapeHtml(canonical)}">`);
-      html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${requestedCategory && categoryMap[requestedCategory] ? escapeHtml(categoryMap[requestedCategory].name || requestedCategory) + " | " : ""}Bangla Choti Kahinii - New Bangla Choti Golpo & Bangla Choti Kahini${page > 1 ? " - Page " + page : ""}</title>`);
-      html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/i, `<meta name="description" content="Bangla Choti Kahinii-তে নতুন বাংলা চটি গল্প ও বাংলা কাহিনি খুঁজুন। নতুন প্রকাশিত গল্প, জনপ্রিয় গল্প এবং বিভিন্ন বিভাগের গল্প এক জায়গায় ব্রাউজ করুন।">`);
+      if (!requestedCategory && !requestedSearch && page === 1) {
+        html = html.replace(/<meta property=["\']og:title["\'] content="[^"]*"\s*\/?>/i, `<meta property="og:title" content="Bangla Choti Kahini - New Bangla Choti Golpo For Bangla Choti Lovers">`);
+        html = html.replace(/<meta property=["\']og:description["\'] content="[^"]*"\s*\/?>/i, `<meta property="og:description" content="Bangla Choti Kahinii daily updated with New Bangla Choti Golpo - Bangla Sex Story - Bangla Panu Golpo written and submitted by Bangla Choti Sex Story writers">`);
+        html = html.replace(/<meta name=["\']twitter:title["\'] content="[^"]*"\s*\/?>/i, `<meta name="twitter:title" content="Bangla Choti Kahini - New Bangla Choti Golpo For Bangla Choti Lovers">`);
+        html = html.replace(/<meta name=["\']twitter:description["\'] content="[^"]*"\s*\/?>/i, `<meta name="twitter:description" content="Bangla Choti Kahinii daily updated with New Bangla Choti Golpo - Bangla Sex Story - Bangla Panu Golpo written and submitted by Bangla Choti Sex Story writers">`);
+      }
+      html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${!requestedCategory && !requestedSearch && page === 1 ? "Bangla Choti Kahini - New Bangla Choti Golpo For Bangla Choti Lovers" : (requestedCategory && categoryMap[requestedCategory] ? escapeHtml(categoryMap[requestedCategory].name || requestedCategory) + " | " : "") + "Bangla Choti Kahinii - New Bangla Choti Golpo & Bangla Choti Kahini" + (page > 1 ? " - Page " + page : "")}</title>`);
+      html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/i, `<meta name="description" content="${!requestedCategory && !requestedSearch && page === 1 ? "Bangla Choti Kahinii daily updated with New Bangla Choti Golpo - Bangla Sex Story - Bangla Panu Golpo written and submitted by Bangla Choti Sex Story writers" : "Bangla Choti Kahinii-তে নতুন বাংলা চটি গল্প ও বাংলা কাহিনি খুঁজুন। নতুন প্রকাশিত গল্প, জনপ্রিয় গল্প এবং বিভিন্ন বিভাগের গল্প এক জায়গায় ব্রাউজ করুন।"}">`);
 
       // Replace the template's hard-coded homepage WebPage/Breadcrumb schema with
       // data for the actual homepage variant (category and pagination included).
