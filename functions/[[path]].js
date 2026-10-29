@@ -8,10 +8,81 @@ export async function onRequest(context) {
   if (path === "indexnow-submit") return context.next();
   if (path === "sitemap.xml" || path === "robots.txt") return context.next();
 
-  // Homepage, known static files and the legacy /story route use the normal asset.
-  if (!path || path.includes(".") || path === "admin" || path.startsWith("admin/") ||
+  // Keep assets/admin/legacy story routes on their original handlers.
+  if (path.includes(".") || path === "admin" || path.startsWith("admin/") ||
       path === "story" || path === "story.html") {
     return context.next();
+  }
+
+  // Server-render the homepage and its category/search/page variants so the
+  // first HTML response already contains story titles, excerpts and crawlable links.
+  if (!path) {
+    try {
+      const [storiesResp, categoriesResp] = await Promise.all([
+        fetch(`${FIREBASE_URL}/stories.json`),
+        fetch(`${FIREBASE_URL}/categories.json`).catch(() => null)
+      ]);
+      if (!storiesResp.ok) return context.next();
+      const rawStories = await storiesResp.json();
+      const rawCategories = categoriesResp && categoriesResp.ok ? await categoriesResp.json() : {};
+      const categories = Object.entries(rawCategories || {}).map(([id, c]) => ({ ...(c || {}), _id: (c && c._id) || id }));
+      const categoryMap = {};
+      for (const c of categories) if (c && c.slug) categoryMap[String(c.slug)] = c;
+
+      const params = url.searchParams;
+      const requestedCategory = params.get("category") || "";
+      const requestedSearch = (params.get("search") || "").trim();
+      const page = Math.max(1, parseInt(params.get("page") || "1", 10) || 1);
+      let stories = Object.entries(rawStories || {}).map(([id, s]) => ({ ...(s || {}), _id: (s && s._id) || id }))
+        .filter(s => s && s.status === "published" && (s.postLink || s.customLink || s.manualLink));
+      if (requestedCategory) stories = stories.filter(s => Array.isArray(s.categories) && s.categories.includes(requestedCategory));
+      if (requestedSearch) {
+        const q = requestedSearch.toLocaleLowerCase();
+        stories = stories.filter(s => [s.title, s.content, s.author, s.excerpt].some(v => String(v || "").toLocaleLowerCase().includes(q)));
+      }
+      stories.sort((a, b) => Number(b.createdOrder || new Date(b.createdAt || 0).getTime()) - Number(a.createdOrder || new Date(a.createdAt || 0).getTime()));
+      const total = stories.length;
+      const totalPages = Math.max(1, Math.ceil(total / 15));
+      const pageStories = stories.slice((page - 1) * 15, page * 15);
+      const storyHref = item => {
+        let value = String(item.postLink || item.customLink || item.manualLink || "").trim();
+        if (/^https?:\/\//i.test(value)) { try { value = new URL(value).pathname; } catch {} }
+        value = decodeSafe(value).replace(/^\/+|\/+$/g, "");
+        if (!value || ["story", "story.html", "index.html", "admin"].includes(value)) return "/";
+        return "/" + value.split("/").map(encodeURIComponent).join("/");
+      };
+      const cardHtml = pageStories.length ? pageStories.map(s => {
+        const href = storyHref(s);
+        const date = s.createdAt && !Number.isNaN(new Date(s.createdAt).getTime())
+          ? new Date(s.createdAt).toLocaleDateString("bn-BD", { day: "2-digit", month: "2-digit", year: "numeric" }) : "";
+        const catsHtml = (Array.isArray(s.categories) ? s.categories : []).map(slug => {
+          const cat = categoryMap[slug] || { name: slug };
+          return `<button type="button" class="story-cat" onclick="event.stopPropagation();filterCat(decodeURIComponent('${encodeURIComponent(String(slug))}'),this)">${cat.icon ? escapeHtml(cat.icon) + " " : ""}${escapeHtml(cat.name || slug)}</button>`;
+        }).join("");
+        return `<div class="story-card" data-story-id="${escapeHtml(s._id)}" onclick="openStory(this.dataset.storyId)"><div class="story-body"><div class="story-title"><a href="${href}" onclick="event.stopPropagation()">${escapeHtml(s.title || "গল্প")}</a></div><div class="story-meta"><span>👤 ${escapeHtml(s.author || "অজ্ঞাত")}</span>${date ? `<span>📅 ${escapeHtml(date)}</span>` : ""}<span>👁 ${Number(s.views || 0).toLocaleString("bn-BD")}</span></div><div class="story-excerpt">${escapeHtml(stripHtml(s.excerpt || stripHtml(s.content || "").slice(0, 180)))}</div><div class="story-cats">${catsHtml}</div></div><button class="bookmark-btn" onclick="toggleBookmark(event, '${escapeHtml(s._id)}')">🔖</button><div class="story-arrow">›</div></div>`;
+      }).join("") : `<div class="loading-spinner">${requestedSearch || requestedCategory ? "কোনো গল্প পাওয়া যায়নি।" : "এখনও কোনো গল্প প্রকাশিত হয়নি।"}</div>`;
+      let pages = [];
+      if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
+      else { const left = Math.max(2, page - 1), right = Math.min(totalPages - 1, page + 1); pages.push(1); if (left > 2) pages.push("..."); for (let i = left; i <= right; i++) pages.push(i); if (right < totalPages - 1) pages.push("..."); pages.push(totalPages); }
+      const paginationHtml = totalPages <= 1 ? "" : `<div class="pagination-nums">${pages.map(p => p === "..." ? `<span class="page-dots">...</span>` : `<button class="page-btn ${p === page ? "active" : ""}" onclick="changePage(${p})">${p}</button>`).join("")}</div><div class="pagination-nav"><button class="page-prev" onclick="changePage(${Math.max(1,page-1)})" ${page === 1 ? "disabled" : ""}>← Previous</button><button class="page-next" onclick="changePage(${Math.min(totalPages,page+1)})" ${page === totalPages ? "disabled" : ""}>Next →</button></div>`;
+      const filterHtml = `<button class="filter-tag${!requestedCategory ? " active" : ""}" onclick="filterCat('',this)">📚 সব গল্প</button>` + categories.filter(c => c && c.slug).map(c => `<button class="filter-tag${requestedCategory === String(c.slug) ? " active" : ""}" data-category="${escapeHtml(c.slug)}" onclick="filterCat(decodeURIComponent('${encodeURIComponent(String(c.slug))}'),this)">${escapeHtml(c.icon || "📖")} ${escapeHtml(c.name || c.slug)}</button>`).join("");
+      const assetResp = await context.env.ASSETS.fetch(new Request(new URL("/", url), { headers: { "Accept": "text/html" } }));
+      if (!assetResp.ok) return assetResp;
+      let html = await assetResp.text();
+      html = html.replace(/<div class="loading-spinner">\s*<div class="spinner"><\/div>\s*<div>গল্প লোড হচ্ছে...<\/div>\s*<\/div>/, cardHtml);
+      html = html.replace('<div class="pagination" id="paginationWrap"></div>', `<div class="pagination" id="paginationWrap">${paginationHtml}</div>`);
+      html = html.replace(/<div(?=[^>]*id="filterTags")[^>]*>[\s\S]*?<\/div>/, match => match.replace(/>[\s\S]*<\/div>$/, `>${filterHtml}</div>`));
+      // Keep the SSR cards visible on first paint; client-side interactions still work.
+      html = html.replace(/<script>\s*const firebaseConfig/, "<script>\nwindow.__SSR_HOME_RENDERED__ = true;\nconst firebaseConfig");
+      html = html.replace("loadCategories().finally(() => loadStories(initialPage, initialCategory, initialSearch));", "loadCategories().finally(() => { if (!window.__SSR_HOME_RENDERED__) loadStories(initialPage, initialCategory, initialSearch); });");
+      const canonical = SITE_ORIGIN + "/";
+      html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>Bangla Choti Kahinii - বাংলা চটি গল্পের সবচেয়ে বড় ঠিকানা</title>`);
+      html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/i, `<meta name="description" content="বাংলা চটি গল্প, বাংলা গল্প ও বিভিন্ন ধরনের বাংলা গল্প পড়ুন Bangla Choti Kahinii-তে। নতুন গল্প, জনপ্রিয় গল্প ও বিভিন্ন বিভাগের গল্প এক জায়গায় পড়ুন।">`);
+      return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=30, s-maxage=120", "X-Content-Type-Options": "nosniff" } });
+    } catch (err) {
+      console.error("SSR homepage render failed:", err);
+      return context.next();
+    }
   }
 
   // Resolve a clean story slug directly from Firebase, then render the story
