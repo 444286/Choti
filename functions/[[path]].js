@@ -19,36 +19,92 @@ export async function onRequest(context) {
 
   if (path === "sitemap.xml") {
     try {
-      const resp = await fetch(`${FIREBASE_URL}/stories.json`);
-      const raw = resp.ok ? await resp.json() : {};
-      const stories = Object.entries(raw || {})
-        .map(([id, s]) => ({ ...(s || {}), _id: (s && s._id) || id }))
-        .filter(s => s && s.status === "published" && (s.postLink || s.customLink || s.manualLink));
+      // Build the sitemap from the live Firebase database on every request.
+      // Only published stories and real category landing pages are included.
+      const [storiesResp, categoriesResp] = await Promise.all([
+        fetch(`${FIREBASE_URL}/stories.json`),
+        fetch(`${FIREBASE_URL}/categories.json`).catch(() => null)
+      ]);
+      if (!storiesResp.ok) {
+        return new Response("Sitemap source temporarily unavailable", {
+          status: 503,
+          headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "300" }
+        });
+      }
 
-      const urls = [`<url><loc>${SITE_ORIGIN}/</loc></url>`];
-      const seen = new Set([SITE_ORIGIN + "/"]);
+      const rawStories = await storiesResp.json();
+      const rawCategories = categoriesResp && categoriesResp.ok ? await categoriesResp.json() : {};
+      const stories = Object.entries(rawStories || {})
+        .map(([id, story]) => ({ ...(story || {}), _id: (story && story._id) || id }))
+        .filter(story => story && story.status === "published" &&
+          (story.postLink || story.customLink || story.manualLink));
+
+      const publishedCategorySlugs = new Set();
+      for (const story of stories) {
+        if (Array.isArray(story.categories)) {
+          for (const slug of story.categories) if (slug) publishedCategorySlugs.add(String(slug));
+        }
+      }
+
+      const entries = new Map();
+      const addEntry = (loc, date) => {
+        const previous = entries.get(loc);
+        const currentDate = safeIso(date);
+        if (!previous || (currentDate && (!previous.lastmod || currentDate > previous.lastmod))) {
+          entries.set(loc, { loc, lastmod: currentDate || (previous && previous.lastmod) || "" });
+        }
+      };
+
+      addEntry(`${SITE_ORIGIN}/`, null);
+
       for (const story of stories) {
         let value = String(story.postLink || story.customLink || story.manualLink || "").trim();
         if (/^https?:\/\//i.test(value)) {
-          try { value = new URL(value).pathname; } catch {}
+          try {
+            const parsed = new URL(value);
+            // Do not publish links that point to a different host.
+            if (parsed.hostname !== new URL(SITE_ORIGIN).hostname) continue;
+            value = parsed.pathname;
+          } catch { continue; }
         }
         value = decodeSafe(value).replace(/^\/+|\/+$/g, "");
-        if (!value || ["story", "story.html", "index.html", "admin"].includes(value)) continue;
-        const loc = SITE_ORIGIN + "/" + value.split("/").map(encodeURIComponent).join("/");
-        if (seen.has(loc)) continue;
-        seen.add(loc);
-        const lastmod = safeIso(story.updatedAt || story.createdAt);
-        urls.push(`<url><loc>${escapeHtml(loc)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}</url>`);
+        if (!value || ["story", "story.html", "index.html", "admin"].includes(value.toLowerCase())) continue;
+        const loc = `${SITE_ORIGIN}/${value.split("/").filter(Boolean).map(encodeURIComponent).join("/")}`;
+        addEntry(loc, story.updatedAt || story.createdAt);
       }
-      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>`;
+
+      // Category pages use the same canonical URL format as the site's SSR:
+      // https://banglachoti.pages.dev/?category=<category-slug>
+      for (const [id, category] of Object.entries(rawCategories || {})) {
+        if (!category || !category.slug) continue;
+        const slug = String(category.slug);
+        if (!publishedCategorySlugs.has(slug)) continue;
+        const categoryUrl = new URL(SITE_ORIGIN + "/");
+        categoryUrl.searchParams.set("category", slug);
+        addEntry(categoryUrl.href, category.updatedAt || category.createdAt);
+      }
+
+      const xmlEscape = value => String(value).replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+      const urlItems = Array.from(entries.values()).map(entry =>
+        `<url><loc>${xmlEscape(entry.loc)}</loc>${entry.lastmod ? `<lastmod>${entry.lastmod}</lastmod>` : ""}</url>`
+      );
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlItems.join("\n")}\n</urlset>`;
       return new Response(xml, {
         status: 200,
-        headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=300" }
+        headers: {
+          "Content-Type": "application/xml; charset=utf-8",
+          "Cache-Control": "public, max-age=300, s-maxage=300",
+          "X-Content-Type-Options": "nosniff"
+        }
       });
     } catch (err) {
       console.error("Sitemap generation failed:", err);
-      const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_ORIGIN}/</loc></url></urlset>`;
-      return new Response(xml, { status: 200, headers: { "Content-Type": "application/xml; charset=utf-8" } });
+      return new Response("Unable to generate sitemap temporarily", {
+        status: 503,
+        headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "300" }
+      });
     }
   }
 
