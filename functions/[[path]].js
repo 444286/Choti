@@ -6,7 +6,51 @@ export async function onRequest(context) {
   const path = decodeSafe(url.pathname.replace(/^\/+|\/+$/g, ""));
 
   if (path === "indexnow-submit") return context.next();
-  if (path === "sitemap.xml" || path === "robots.txt") return context.next();
+
+  // Serve real crawler files instead of allowing Cloudflare Pages SPA fallback
+  // to return index.html for these URLs.
+  if (path === "robots.txt") {
+    const body = `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /admin/\n\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`;
+    return new Response(body, {
+      status: 200,
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" }
+    });
+  }
+
+  if (path === "sitemap.xml") {
+    try {
+      const resp = await fetch(`${FIREBASE_URL}/stories.json`);
+      const raw = resp.ok ? await resp.json() : {};
+      const stories = Object.entries(raw || {})
+        .map(([id, s]) => ({ ...(s || {}), _id: (s && s._id) || id }))
+        .filter(s => s && s.status === "published" && (s.postLink || s.customLink || s.manualLink));
+
+      const urls = [`<url><loc>${SITE_ORIGIN}/</loc></url>`];
+      const seen = new Set([SITE_ORIGIN + "/"]);
+      for (const story of stories) {
+        let value = String(story.postLink || story.customLink || story.manualLink || "").trim();
+        if (/^https?:\/\//i.test(value)) {
+          try { value = new URL(value).pathname; } catch {}
+        }
+        value = decodeSafe(value).replace(/^\/+|\/+$/g, "");
+        if (!value || ["story", "story.html", "index.html", "admin"].includes(value)) continue;
+        const loc = SITE_ORIGIN + "/" + value.split("/").map(encodeURIComponent).join("/");
+        if (seen.has(loc)) continue;
+        seen.add(loc);
+        const lastmod = safeIso(story.updatedAt || story.createdAt);
+        urls.push(`<url><loc>${escapeHtml(loc)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}</url>`);
+      }
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>`;
+      return new Response(xml, {
+        status: 200,
+        headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=300" }
+      });
+    } catch (err) {
+      console.error("Sitemap generation failed:", err);
+      const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_ORIGIN}/</loc></url></urlset>`;
+      return new Response(xml, { status: 200, headers: { "Content-Type": "application/xml; charset=utf-8" } });
+    }
+  }
 
   // Keep assets/admin/legacy story routes on their original handlers.
   if (path.includes(".") || path === "admin" || path.startsWith("admin/") ||
