@@ -194,12 +194,12 @@ export async function onRequest(context) {
       html = html.replace(/<meta property=["']og:url["'] content=["'][^"']*["']\s*\/?>/i, `<meta property="og:url" content="${escapeHtml(canonical)}">`);
       if (!requestedCategory && !requestedSearch && page === 1) {
         html = html.replace(/<meta property=["\']og:title["\'] content="[^"]*"\s*\/?>/i, `<meta property="og:title" content="Bangla Choti Kahini - New Bangla Choti Golpo For Bangla Choti Lovers">`);
-        html = html.replace(/<meta property=["\']og:description["\'] content="[^"]*"\s*\/?>/i, `<meta property="og:description" content="Bangla Choti Kahinii daily updated with New Bangla Choti Golpo - Bangla Sex Story - Bangla Panu Golpo written and submitted by Bangla Choti Sex Story writers">`);
+        html = html.replace(/<meta property=["\']og:description["\'] content="[^"]*"\s*\/?>/i, `<meta property="og:description" content="Bangla Choti Kahini daily updated with New Bangla Choti Golpo - Bangla Sex Story - Bangla Panu Golpo written and submitted by Bangla Choti Sex Story writers">`);
         html = html.replace(/<meta name=["\']twitter:title["\'] content="[^"]*"\s*\/?>/i, `<meta name="twitter:title" content="Bangla Choti Kahini - New Bangla Choti Golpo For Bangla Choti Lovers">`);
-        html = html.replace(/<meta name=["\']twitter:description["\'] content="[^"]*"\s*\/?>/i, `<meta name="twitter:description" content="Bangla Choti Kahinii daily updated with New Bangla Choti Golpo - Bangla Sex Story - Bangla Panu Golpo written and submitted by Bangla Choti Sex Story writers">`);
+        html = html.replace(/<meta name=["\']twitter:description["\'] content="[^"]*"\s*\/?>/i, `<meta name="twitter:description" content="Bangla Choti Kahini daily updated with New Bangla Choti Golpo - Bangla Sex Story - Bangla Panu Golpo written and submitted by Bangla Choti Sex Story writers">`);
       }
-      html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${!requestedCategory && !requestedSearch && page === 1 ? "Bangla Choti Kahini - New Bangla Choti Golpo For Bangla Choti Lovers" : (requestedCategory && categoryMap[requestedCategory] ? escapeHtml(categoryMap[requestedCategory].name || requestedCategory) + " | " : "") + "Bangla Choti Kahinii - New Bangla Choti Golpo & Bangla Choti Kahini" + (page > 1 ? " - Page " + page : "")}</title>`);
-      html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/i, `<meta name="description" content="${!requestedCategory && !requestedSearch && page === 1 ? "Bangla Choti Kahinii daily updated with New Bangla Choti Golpo - Bangla Sex Story - Bangla Panu Golpo written and submitted by Bangla Choti Sex Story writers" : "Bangla Choti Kahinii-তে নতুন বাংলা চটি গল্প ও বাংলা কাহিনি খুঁজুন। নতুন প্রকাশিত গল্প, জনপ্রিয় গল্প এবং বিভিন্ন বিভাগের গল্প এক জায়গায় ব্রাউজ করুন।"}">`);
+      html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${!requestedCategory && !requestedSearch && page === 1 ? "Bangla Choti Kahini - New Bangla Choti Golpo For Bangla Choti Lovers" : (requestedCategory && categoryMap[requestedCategory] ? escapeHtml(categoryMap[requestedCategory].name || requestedCategory) + " | " : "") + "Bangla Choti Kahini - New Bangla Choti Golpo & Bangla Choti Kahini" + (page > 1 ? " - Page " + page : "")}</title>`);
+      html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/i, `<meta name="description" content="${!requestedCategory && !requestedSearch && page === 1 ? "Bangla Choti Kahini daily updated with New Bangla Choti Golpo - Bangla Sex Story - Bangla Panu Golpo written and submitted by Bangla Choti Sex Story writers" : "Bangla Choti Kahini-তে নতুন বাংলা চটি গল্প ও বাংলা কাহিনি খুঁজুন। নতুন প্রকাশিত গল্প, জনপ্রিয় গল্প এবং বিভিন্ন বিভাগের গল্প এক জায়গায় ব্রাউজ করুন।"}">`);
 
       // Replace the template's hard-coded homepage WebPage/Breadcrumb schema with
       // data for the actual homepage variant (category and pagination included).
@@ -232,8 +232,8 @@ export async function onRequest(context) {
               if (node && (node["@type"] === "WebPage" || (Array.isArray(node["@type"]) && node["@type"].includes("WebPage")))) {
                 node["@id"] = canonical + "#webpage";
                 node.url = canonical;
-                node.name = (categoryName ? categoryName + " | " : "") + "Bangla Choti Kahinii - বাংলা চটি গল্পের সবচেয়ে বড় ঠিকানা" + (page > 1 ? " - পৃষ্ঠা " + page : "");
-                node.description = "বাংলা চটি গল্প, বাংলা গল্প ও বিভিন্ন ধরনের বাংলা গল্প পড়ুন Bangla Choti Kahinii-তে।";
+                node.name = (categoryName ? categoryName + " | " : "") + "Bangla Choti Kahini - বাংলা চটি গল্পের সবচেয়ে বড় ঠিকানা" + (page > 1 ? " - পৃষ্ঠা " + page : "");
+                node.description = "বাংলা চটি গল্প, বাংলা গল্প ও বিভিন্ন ধরনের বাংলা গল্প পড়ুন Bangla Choti Kahini-তে।";
                 node.breadcrumb = { "@type": "BreadcrumbList", "itemListElement": breadcrumbItems };
               }
             }
@@ -285,9 +285,9 @@ export async function onRequest(context) {
     const title = String(found.title || "বাংলা গল্প").trim();
     const seoTitle = /bangla choti golpo|bangla choti kahinii/i.test(title)
       ? title
-      : `${title} - Bangla Choti Golpo | Bangla Choti Kahinii`;
+      : `${title} - Bangla Choti Golpo | Bangla Choti Kahini`;
     const description = String(found.excerpt || stripHtml(found.content).slice(0, 160) ||
-      `${title} গল্পটি Bangla Choti Kahinii-তে পড়ুন।`).trim();
+      `${title} গল্পটি Bangla Choti Kahini-তে পড়ুন।`).trim();
     const canonical = `${SITE_ORIGIN}/${wanted.split("/").map(encodeURIComponent).join("/")}`;
     const safeTitle = escapeHtml(title);
     const safeSeoTitle = escapeHtml(seoTitle);
@@ -381,8 +381,8 @@ export async function onRequest(context) {
       "description": description,
       "url": canonical,
       "inLanguage": "bn-BD",
-      "author": { "@type": "Person", "name": found.author || "Bangla Choti Kahinii" },
-      "publisher": { "@type": "Organization", "name": "Bangla Choti Kahinii", "url": SITE_ORIGIN + "/" },
+      "author": { "@type": "Person", "name": found.author || "Bangla Choti Kahini" },
+      "publisher": { "@type": "Organization", "name": "Bangla Choti Kahini", "url": SITE_ORIGIN + "/" },
       ...(found.createdAt ? { "datePublished": safeIso(found.createdAt) } : {}),
       ...(found.updatedAt ? { "dateModified": safeIso(found.updatedAt) } : {}),
       ...(found.image ? { "image": [new URL(found.image, SITE_ORIGIN).href] } : {})
