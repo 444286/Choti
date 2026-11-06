@@ -186,7 +186,7 @@ export async function onRequest(context) {
         const count = Number(c.count || c.postCount || 0);
         return `<a href="/?category=${encodeURIComponent(slug)}"><span>${escapeHtml(c.name || slug)}</span>${count ? `<span class="cat-count">(${count})</span>` : ''}</a>`;
       }).join('');
-      const allCategoriesSection = `<section class="all-categories-section" id="allCategoriesSection" aria-label="সব ক্যাটাগরি"><h2 class="all-categories-title">All Categories</h2><div class="all-categories-list">${allCategoriesHtml || 'কোনো ক্যাটাগরি পাওয়া যায়নি।'}</div></section>`;
+      const allCategoriesSection = `<section class="all-categories-section" id="allCategoriesSection" aria-label="সব ক্যাটাগরি"><h2 class="all-categories-title">Main Tags</h2><div class="all-categories-list">${allCategoriesHtml || 'কোনো ক্যাটাগরি পাওয়া যায়নি।'}</div></section>`;
       html = html.replace(/<section class="all-categories-section" id="allCategoriesSection"[\s\S]*?<\/section>/i, allCategoriesSection);
       html = html.replace(/<div(?=[^>]*id="filterTags")[^>]*>[\s\S]*?<\/div>/, match => match.replace(/>[\s\S]*<\/div>$/, `>${filterHtml}</div>`));
       // Keep the SSR cards visible on first paint; client-side interactions still work.
@@ -323,7 +323,7 @@ export async function onRequest(context) {
     // All site categories are part of the server-rendered story HTML, directly
     // after Related Posts and the story's own Categories section.
     const allCategoryHtml = categoriesData && Object.keys(categoriesData).length
-      ? `<section class="story-all-categories"><div class="category-title">All Categories</div><div class="all-category-links">${Object.values(categoriesData).filter(cat => cat && cat.slug).map(cat => `<a href="/?category=${encodeURIComponent(String(cat.slug))}">${escapeHtml(cat.name || cat.slug)}</a>`).join('')}</div></section>`
+      ? `<section class="story-all-categories"><div class="category-title">Main Tags</div><div class="all-category-links">${Object.values(categoriesData).filter(cat => cat && cat.slug).map(cat => `<a href="/?category=${encodeURIComponent(String(cat.slug))}">${escapeHtml(cat.name || cat.slug)}</a>`).join('')}</div></section>`
       : '';
 
     const linksResp = await fetch(`${FIREBASE_URL}/stories/${encodeURIComponent(found._id)}/links.json`).catch(() => null);
