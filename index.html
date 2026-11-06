@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-<script data-cfasync="false" src="https://afders.org/1/a9b8593552dfce6d9b7c2646fa5a8136"></script>
 
 <meta name="monetag" content="6699f051e0ed507c6470cffca94ae21f">
 
@@ -778,7 +777,16 @@
 .hero {
   display: none !important;
 }
-.story-title a{color:inherit;text-decoration:none}.story-title a:hover{text-decoration:underline}</style>
+.story-title a{color:inherit;text-decoration:none}.story-title a:hover{text-decoration:underline}
+/* All categories list at the bottom of the home page */
+.all-categories-section{margin:22px 15px 18px;padding:0 15px 12px;border:1px solid var(--border,#e8e8e8);border-radius:10px;background:var(--card-bg,#fff)}
+.all-categories-title{margin:0 -15px 4px;padding:13px 15px;border-bottom:1px solid var(--border,#eee);font-size:17px;font-weight:700}
+.all-categories-list{display:flex;flex-direction:column}
+.all-categories-list a{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;color:var(--text,#333);font-size:14px;text-decoration:none;border-bottom:1px solid rgba(128,128,128,.10)}
+.all-categories-list a:last-child{border-bottom:0}
+.all-categories-list a:hover{color:#2878bd}
+.all-categories-list .cat-count{color:#2878bd;font-size:12px;font-weight:600}
+</style>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -839,8 +847,6 @@
   </script>
 </head>
 <body>
-
-<script data-cfasync="false" src="https://bicea.org/14/dcdb27aaa2903e9d75508165043ea7c7"></script>
 
 <!-- ===== HEADER ===== -->
 <header class="header">
@@ -914,6 +920,12 @@
 
 <!-- ===== PAGINATION ===== -->
 <div class="pagination" id="paginationWrap"></div>
+
+<!-- ===== ALL CATEGORIES (BEFORE FOOTER) ===== -->
+<section class="all-categories-section" id="allCategoriesSection" aria-label="সব ক্যাটাগরি">
+  <h2 class="all-categories-title">All Categories</h2>
+  <div class="all-categories-list" id="allCategoriesList">ক্যাটাগরি লোড হচ্ছে...</div>
+</section>
 
 <!-- ===== FOOTER ===== -->
 <footer class="footer" itemscope itemtype="https://schema.org/WPFooter">
@@ -993,7 +1005,7 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
       const raw=snap.val()||{};
       categoryList=Object.entries(raw).map(([id,c])=>({...c,_id:c._id||id}));
       categoryMap={}; categoryList.forEach(c=>{if(c&&c.slug)categoryMap[String(c.slug)]=c;});
-      renderCategoryMenu(); renderCategoryOverlay();
+      renderCategoryMenu(); renderCategoryOverlay(); renderAllCategories();
     }, e=>console.error('Category listener error',e));
   }
   async function loadCategories(force = false) {
@@ -1004,8 +1016,20 @@ firebase.initializeApp(firebaseConfig); const db=firebase.database();
       const raw=snap.val()||{};
       categoryList=Object.entries(raw).map(([id,c])=>({...c,_id:c._id||id}));
       categoryMap={}; categoryList.forEach(c=>{if(c&&c.slug)categoryMap[String(c.slug)]=c;});
-      renderCategoryMenu(); renderCategoryOverlay(); return categoryList;
+      renderCategoryMenu(); renderCategoryOverlay(); renderAllCategories(); return categoryList;
     }catch(e){console.error('Category load error',e);return categoryList;}
+  }
+
+  function renderAllCategories() {
+    const box = document.getElementById('allCategoriesList');
+    if (!box) return;
+    const list = categoryList.filter(c => c && c.slug);
+    if (!list.length) { box.textContent = 'কোনো ক্যাটাগরি পাওয়া যায়নি।'; return; }
+    box.innerHTML = list.map(c => {
+      const slug = String(c.slug);
+      const count = Number(c.count || c.postCount || 0);
+      return `<a href="/?category=${encodeURIComponent(slug)}"><span>${escapeHtml(c.name || slug)}</span>${count ? `<span class="cat-count">(${count})</span>` : ''}</a>`;
+    }).join('');
   }
 
   function renderCategoryMenu() {
