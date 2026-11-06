@@ -179,8 +179,8 @@ export async function onRequest(context) {
       let html = await assetResp.text();
       html = html.replace(/<div class="loading-spinner">\s*<div class="spinner"><\/div>\s*<div>গল্প লোড হচ্ছে...<\/div>\s*<\/div>/, cardHtml);
       html = html.replace('<div class="pagination" id="paginationWrap"></div>', `<div class="pagination" id="paginationWrap">${paginationHtml}</div>`);
-      // Render the complete category directory into the initial HTML response.
-      // This makes every category link visible to crawlers without waiting for JavaScript.
+      // Render the same global Main Tags directory on the homepage and every category/search/pagination result.
+      // It is part of the initial HTML response and remains in the same position immediately before the footer.
       const allCategoriesHtml = categories.filter(c => c && c.slug).map(c => {
         const slug = String(c.slug);
         const count = Number(c.count || c.postCount || 0);
