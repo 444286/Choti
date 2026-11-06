@@ -778,14 +778,14 @@
   display: none !important;
 }
 .story-title a{color:inherit;text-decoration:none}.story-title a:hover{text-decoration:underline}
-/* All categories list at the bottom of the home page */
-.all-categories-section{margin:22px 15px 18px;padding:0 15px 12px;border:1px solid var(--border,#e8e8e8);border-radius:10px;background:var(--card-bg,#fff)}
-.all-categories-title{margin:0 -15px 4px;padding:13px 15px;border-bottom:1px solid var(--border,#eee);font-size:17px;font-weight:700}
+/* Main Tags: plain site-matched link list, without a separate card or border */
+.all-categories-section{max-width:1200px;margin:22px auto 18px;padding:0 20px;background:transparent;border:0;border-radius:0;box-shadow:none}
+.all-categories-title{margin:0 0 8px;padding:0;font-size:16px;line-height:1.5;font-weight:700;color:var(--text,#222);border:0}
 .all-categories-list{display:flex;flex-direction:column}
-.all-categories-list a{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;color:var(--text,#333);font-size:14px;text-decoration:none;border-bottom:1px solid rgba(128,128,128,.10)}
-.all-categories-list a:last-child{border-bottom:0}
+.all-categories-list a{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;color:var(--text,#333);font-size:14px;text-decoration:none;border:0;background:transparent}
 .all-categories-list a:hover{color:#2878bd}
 .all-categories-list .cat-count{color:#2878bd;font-size:12px;font-weight:600}
+@media(max-width:600px){.all-categories-section{margin:20px 15px 16px;padding:0}}
 </style>
   <script type="application/ld+json">
   {
@@ -922,8 +922,8 @@
 <div class="pagination" id="paginationWrap"></div>
 
 <!-- ===== ALL CATEGORIES (BEFORE FOOTER) ===== -->
-<section class="all-categories-section" id="allCategoriesSection" aria-label="সব ক্যাটাগরি">
-  <h2 class="all-categories-title">All Categories</h2>
+<section class="all-categories-section" id="allCategoriesSection" aria-label="Main Tags">
+  <h2 class="all-categories-title">Main Tags</h2>
   <div class="all-categories-list" id="allCategoriesList">ক্যাটাগরি লোড হচ্ছে...</div>
 </section>
 
