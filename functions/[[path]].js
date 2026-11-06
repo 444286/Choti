@@ -179,6 +179,15 @@ export async function onRequest(context) {
       let html = await assetResp.text();
       html = html.replace(/<div class="loading-spinner">\s*<div class="spinner"><\/div>\s*<div>গল্প লোড হচ্ছে...<\/div>\s*<\/div>/, cardHtml);
       html = html.replace('<div class="pagination" id="paginationWrap"></div>', `<div class="pagination" id="paginationWrap">${paginationHtml}</div>`);
+      // Render the complete category directory into the initial HTML response.
+      // This makes every category link visible to crawlers without waiting for JavaScript.
+      const allCategoriesHtml = categories.filter(c => c && c.slug).map(c => {
+        const slug = String(c.slug);
+        const count = Number(c.count || c.postCount || 0);
+        return `<a href="/?category=${encodeURIComponent(slug)}"><span>${escapeHtml(c.name || slug)}</span>${count ? `<span class="cat-count">(${count})</span>` : ''}</a>`;
+      }).join('');
+      const allCategoriesSection = `<section class="all-categories-section" id="allCategoriesSection" aria-label="সব ক্যাটাগরি"><h2 class="all-categories-title">All Categories</h2><div class="all-categories-list">${allCategoriesHtml || 'কোনো ক্যাটাগরি পাওয়া যায়নি।'}</div></section>`;
+      html = html.replace(/<section class="all-categories-section" id="allCategoriesSection"[\s\S]*?<\/section>/i, allCategoriesSection);
       html = html.replace(/<div(?=[^>]*id="filterTags")[^>]*>[\s\S]*?<\/div>/, match => match.replace(/>[\s\S]*<\/div>$/, `>${filterHtml}</div>`));
       // Keep the SSR cards visible on first paint; client-side interactions still work.
       html = html.replace(/<script>\s*const firebaseConfig/, "<script>\nwindow.__SSR_HOME_RENDERED__ = true;\nconst firebaseConfig");
@@ -311,6 +320,11 @@ export async function onRequest(context) {
           const cat = categoryMap[slug] || { name: slug };
           return `<a class="cat" href="/?category=${encodeURIComponent(slug)}">${escapeHtml(cat.name || slug)}</a>`;
         }).join(', ')}</div></section>` : '';
+    // All site categories are part of the server-rendered story HTML, directly
+    // after Related Posts and the story's own Categories section.
+    const allCategoryHtml = categoriesData && Object.keys(categoriesData).length
+      ? `<section class="story-all-categories"><div class="category-title">All Categories</div><div class="all-category-links">${Object.values(categoriesData).filter(cat => cat && cat.slug).map(cat => `<a href="/?category=${encodeURIComponent(String(cat.slug))}">${escapeHtml(cat.name || cat.slug)}</a>`).join('')}</div></section>`
+      : '';
 
     const linksResp = await fetch(`${FIREBASE_URL}/stories/${encodeURIComponent(found._id)}/links.json`).catch(() => null);
     const linksData = linksResp && linksResp.ok ? (await linksResp.json() || {}) : {};
@@ -346,7 +360,7 @@ export async function onRequest(context) {
       const next = findPart(num + 1);
       if (prev || next) prevNextHtml = `<div class="porbo-nav">${prev ? `<a href="${storyHref(prev)}">← আগের পর্ব</a>` : ''}<div class="spacer"></div>${next ? `<a href="${storyHref(next)}">পরের পর্ব →</a>` : ''}</div>`;
     }
-    const storyHtml = `<div class="head"><h1 class="title">${safeTitle}</h1><div class="meta"><span>👤 ${author}</span>${date ? `<span>📅 ${escapeHtml(date)}</span>` : ""}<span>👁 ${views.toLocaleString("bn-BD")}</span></div></div>${prevNextHtml}<article class="content">${content}</article>${prevNextHtml}${partsHtml}${relatedHtml}${categoryHtml}`;
+    const storyHtml = `<div class="head"><h1 class="title">${safeTitle}</h1><div class="meta"><span>👤 ${author}</span>${date ? `<span>📅 ${escapeHtml(date)}</span>` : ""}<span>👁 ${views.toLocaleString("bn-BD")}</span></div></div>${prevNextHtml}<article class="content">${content}</article>${prevNextHtml}${partsHtml}${relatedHtml}${categoryHtml}${allCategoryHtml}`;
 
     // Remove the client-side document.write canonical generator to avoid duplicate canonicals.
     html = html.replace(/<script>\s*\(function\(\)\{\s*\/\/ Worker passes slug[\s\S]*?<\/script>/i, "");
