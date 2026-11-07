@@ -1,6 +1,28 @@
 const FIREBASE_URL = "https://jobs-33e35-default-rtdb.asia-southeast1.firebasedatabase.app";
 const SITE_ORIGIN = "https://banglachoti.pages.dev";
 
+// Atomically increment a story's view counter using Firebase REST ETags.
+async function incrementStoryViews(storyId) {
+  const endpoint = `${FIREBASE_URL}/stories/${encodeURIComponent(storyId)}/views.json`;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const read = await fetch(endpoint, { headers: { "X-Firebase-ETag": "true" }, cache: "no-store" });
+    if (!read.ok) throw new Error(`Firebase view read failed: ${read.status}`);
+    const current = Number(await read.json()) || 0;
+    const etag = read.headers.get("ETag");
+    if (!etag) throw new Error("Firebase did not return an ETag for view counter");
+    const write = await fetch(endpoint, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "if-match": etag },
+      body: JSON.stringify(current + 1),
+      cache: "no-store"
+    });
+    if (write.status === 412) continue;
+    if (!write.ok) throw new Error(`Firebase view write failed: ${write.status}`);
+    return current + 1;
+  }
+  throw new Error("Firebase view counter update conflicted repeatedly");
+}
+
 export async function onRequest(context) {
   const url = new URL(context.request.url);
   const path = decodeSafe(url.pathname.replace(/^\/+|\/+$/g, ""));
@@ -291,6 +313,15 @@ export async function onRequest(context) {
     if (!assetResp.ok) return assetResp;
     let html = await assetResp.text();
 
+    // Server-rendered story pages skip the browser loader, so count the visit here.
+    // Use an ETag-guarded increment to avoid lost updates during concurrent visits.
+    try {
+      found.views = await incrementStoryViews(found._id);
+    } catch (viewError) {
+      console.error("Story view count update failed:", viewError);
+      found.views = Number(found.views) || 0;
+    }
+
     const title = String(found.title || "বাংলা গল্প").trim();
     const seoTitle = /bangla choti golpo|bangla choti kahinii/i.test(title)
       ? title
@@ -412,7 +443,7 @@ export async function onRequest(context) {
       status: 200,
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=60, s-maxage=300",
+        "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff"
       }
     });
