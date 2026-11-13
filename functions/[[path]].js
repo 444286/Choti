@@ -39,7 +39,7 @@ export async function onRequest(context) {
     });
   }
 
-  if (path === "sitemap.xml") {
+  if (path === "sitemap.xml" || path === "sitemap-stories.xml") {
     try {
       // Build the sitemap from the live Firebase database on every request.
       // Only published stories and real category landing pages are included.
@@ -503,4 +503,8 @@ function sanitizeStoryContent(v) {
     .replace(/\son\w+\s*=\s*(["']).*?\1/gi, "")
     .replace(/javascript\s*:/gi, "");
 }
-function safeIso(v) { const d = new Date(v); return Number.isNaN(d.getTime()) ? undefined : d.toISOString(); }
+function safeIso(v) {
+  if (!v) return undefined;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+}
